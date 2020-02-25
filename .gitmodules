@@ -1,0 +1,6 @@
+[submodule "mod/operator"]
+	path = mod/operator
+	url = https://github.com/canonical/operator
+[submodule "mod/interface-ceph-client"]
+	path = mod/interface-ceph-client
+	url = https://github.com/gnuoy/oper-interface-ceph-client.git
