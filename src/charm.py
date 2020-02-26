@@ -55,7 +55,7 @@ class CephISCSIGatewayCharm(CharmBase):
             self.model.unit.status = WaitingStatus('not ready for reasons')
 
     def on_ceph_client_relation_joined(self, event):
-        self.ceph_client.create_replicated_pool('rbd')
+        self.ceph_client.create_replicated_pool('iscsi')
         self.ceph_client.request_ceph_permissions(
             'ceph-iscsi',
             self.CEPH_CAPABILITIES)
