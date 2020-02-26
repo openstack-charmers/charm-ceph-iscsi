@@ -1,13 +1,13 @@
 # This file is managed centrally.  If you find the need to modify this as a
 # one-off, please don't.  Intead, consult #openstack-charms and ask about
 # requirements management in charms via bot-control.  Thank you.
-#
-# Lint and unit test requirements
+charm-tools>=2.4.4
+coverage>=3.6
+mock>=1.2
 flake8>=2.2.4,<=2.4.1
 stestr>=2.2.0
 requests>=2.18.4
-charms.reactive
-mock>=1.2
-nose>=1.3.7
-coverage>=3.6
-git+https://github.com/openstack/charms.openstack.git#egg=charms.openstack
+git+https://github.com/gnuoy/zaza.git@force-focal#egg=zaza
+git+https://github.com/gnuoy/zaza-openstack-tests.git@ceph-iscsi-tests#egg=zaza.openstack
+pytz    # workaround for 14.04 pip/tox
+pyudev  # for ceph-* charm unit tests (not mocked?)

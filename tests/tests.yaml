@@ -1,0 +1,9 @@
+charm_name: ceph-iscsi
+gate_bundles:
+  - focal
+smoke_bundles:
+  - focal
+configure:
+  - zaza.openstack.charm_tests.ceph.iscsi.setup.basic_guest_setup
+tests:
+  - zaza.openstack.charm_tests.ceph.iscsi.tests.CephISCSIGatewayTest

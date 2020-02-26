@@ -11,6 +11,10 @@ from ops.framework import (
     StoredState,
 )
 from ops.main import main
+from ops.model import (
+    ActiveStatus,
+    WaitingStatus,
+)
 from charmhelpers.fetch import (
     apt_install,
     apt_update,
@@ -31,7 +35,9 @@ class CephISCSIGatewayCharm(CharmBase):
 
     def __init__(self, framework, key):
         super().__init__(framework, key)
+        self.state.set_default(is_started=False)
         self.framework.observe(self.on.install, self)
+        self.framework.observe(self.on.update_status, self)
         self.framework.observe(self.on.ceph_client_relation_joined, self)
         self.ceph_client = interface_ceph_client.CephClientRequires(
             self,
@@ -41,6 +47,12 @@ class CephISCSIGatewayCharm(CharmBase):
     def on_install(self, event):
         apt_update(fatal=True)
         apt_install(self.PACKAGES, fatal=True)
+
+    def on_update_status(self, event):
+        if self.state.is_started:
+            self.model.unit.status = ActiveStatus('Unit is ready')
+        else:
+            self.model.unit.status = WaitingStatus('not ready for reasons')
 
     def on_ceph_client_relation_joined(self, event):
         self.ceph_client.create_replicated_pool('rbd')
@@ -77,6 +89,8 @@ class CephISCSIGatewayCharm(CharmBase):
                     config_file,
                     ceph_context)
         render_configs()
+        self.state.is_started = True
+        self.model.unit.status = ActiveStatus('Unit is ready')
 
 
 if __name__ == '__main__':

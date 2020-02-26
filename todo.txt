@@ -1,0 +1,13 @@
+Confirm zaza tests are working
+Remove hardcoded ceph pool name and expose as a config option
+Write spec
+Fix workload status so it reports missing relations
+Implement pause/resume
+Add iscsi target create action
+Add series upgrade
+Write README
+Move to openstack-charmers
+Refactor ceph broker code in charm helpers
+Rewrite ceph-client interface to stop using any relation* commands via charmhelpers
+implement source config option
+Proper Update Status
