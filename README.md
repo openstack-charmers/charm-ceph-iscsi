@@ -16,3 +16,6 @@ cd test
 ./02-setup-gw.sh
 ./03-setup-client-iscsi.sh
 ```
+
+To run the charm tests (tested on OpenStack provider):
+tox -e func-smoke

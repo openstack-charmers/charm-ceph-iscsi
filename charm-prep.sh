@@ -8,3 +8,4 @@ git submodule init
 git submodule update
 (cd lib; ln -s ../mod/operator/ops;)
 (cd lib; ln -s ../mod/interface-ceph-client/interface_ceph_client.py;)
+(cd lib; ln -s ../mod/ops_openstack/ops_openstack.py;)

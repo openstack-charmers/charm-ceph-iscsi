@@ -15,5 +15,8 @@ subordinate: false
 requires:
   ceph-client:
     interface: ceph-client
+peers:
+  cluster:
+    interface: ceph-iscsi-peer
 extra-bindings:
   public:
