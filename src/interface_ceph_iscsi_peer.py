@@ -14,6 +14,7 @@ from ops.framework import (
 class HasPeersEvent(EventBase):
     pass
 
+
 class ReadyPeersEvent(EventBase):
     pass
 
@@ -34,6 +35,7 @@ class CephISCSIGatewayPeers(Object):
     def __init__(self, charm, relation_name):
         super().__init__(charm, relation_name)
         self.relation_name = relation_name
+        self.this_unit = self.framework.model.unit
         self.framework.observe(
             charm.on[relation_name].relation_changed,
             self.on_changed)
@@ -50,8 +52,8 @@ class CephISCSIGatewayPeers(Object):
 
     def announce_ready(self):
         logging.info("announcing ready")
-        self.peer_rel.data[self.framework.model.unit][self.READY_KEY] = 'True'
-        self.peer_rel.data[self.framework.model.unit][self.FQDN_KEY] = self.fqdn
+        self.peer_rel.data[self.this_unit][self.READY_KEY] = 'True'
+        self.peer_rel.data[self.this_unit][self.FQDN_KEY] = self.fqdn
 
     @property
     def ready_peer_details(self):

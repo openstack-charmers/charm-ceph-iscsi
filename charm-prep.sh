@@ -9,3 +9,6 @@ git submodule update
 (cd lib; ln -s ../mod/operator/ops;)
 (cd lib; ln -s ../mod/interface-ceph-client/interface_ceph_client.py;)
 (cd lib; ln -s ../mod/ops-openstack/ops_openstack.py)
+(cd mod/interface-ceph-client; git pull origin master)
+(cd mod/operator; git pull origin master)
+(cd mod/ops-openstack; git pull origin master)

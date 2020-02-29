@@ -2,7 +2,6 @@
 
 import logging
 import os
-import socket
 import subprocess
 import sys
 import string
@@ -22,6 +21,7 @@ import interface_ceph_iscsi_peer
 import ops_openstack
 
 logger = logging.getLogger()
+
 
 class GatewayClient():
 
@@ -64,6 +64,7 @@ class GatewayClient():
         self.run(
             "/iscsi-targets/{}/hosts/{}".format(iqn, initiatorname),
             "disk add {}/{}".format(pool_name, image_name))
+
 
 class CephISCSIGatewayCharm(ops_openstack.OSBaseCharm):
     state = StoredState()
