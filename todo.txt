@@ -1,17 +1,21 @@
-Confirm zaza tests are working
-Remove hardcoded ceph pool name and expose as a config option
-Write spec
-Fix workload status so it reports missing relations
-Implement pause/resume
-Add iscsi target create action
-Add series upgrade
-Write README
-Move to openstack-charmers
-Refactor ceph broker code in charm helpers
-Rewrite ceph-client interface to stop using any relation* commands via charmhelpers
-implement source config option
-Proper Update Status
-admin password
-Certificates interface
-trusted_ips
-security checklist
+Todo
+* implement source config option
+* Proper Update Status
+* Remove hardcoded ceph pool name and expose as a config option
+* Write spec
+* Fix workload status so it reports missing relations
+* Add series upgrade
+* Write README
+* Move to openstack-charmers
+* Refactor ceph broker code in charm helpers
+* Rewrite ceph-client interface to stop using any relation* commands via charmhelpers
+* Certificates interface
+* security checklist
+* zaza tests for pause/resume
+
+Mostly Done
+* trusted_ips
+* zaza tests for creating nd mounting a target
+* Implement pause/resume
+* Add iscsi target create action
+* admin password

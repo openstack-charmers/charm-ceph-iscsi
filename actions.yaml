@@ -34,10 +34,17 @@ create-target:
       type: string
       default: 1G
       description: "The initiator name of the client that will mount the target"
+    client-username:
+      type: string
+      description: "The CHAPs username to be created for the client"
+    client-password:
+      type: string
+      description: "The CHAPs password to be created for the client"
   required:
     - gateway-units
     - iqn
     - image-size
     - image-name
     - client-initiatorname
-
+    - client-username
+    - client-password

@@ -51,17 +51,24 @@ class CephISCSIGatewayPeers(Object):
     def announce_ready(self):
         logging.info("announcing ready")
         self.peer_rel.data[self.framework.model.unit][self.READY_KEY] = 'True'
-        self.peer_rel.data[self.framework.model.unit][self.FQDN_KEY] = socket.getfqdn()
+        self.peer_rel.data[self.framework.model.unit][self.FQDN_KEY] = self.fqdn
 
     @property
     def ready_peer_details(self):
-        peers = {}
+        peers = {
+            self.framework.model.unit.name: {
+                'fqdn': self.fqdn,
+                'ip': self.cluster_bind_address}}
         for u in self.peer_rel.units:
             if self.peer_rel.data[u].get(self.READY_KEY) == 'True':
                 peers[u.name] = {
                     'fqdn': self.peer_rel.data[u][self.FQDN_KEY],
                     'ip': self.peer_rel.data[u]['ingress-address']}
         return peers
+
+    @property
+    def fqdn(self):
+        return socket.getfqdn()
 
     @property
     def is_joined(self):
@@ -77,7 +84,7 @@ class CephISCSIGatewayPeers(Object):
 
     @property
     def cluster_bind_address(self):
-        return self.peer_binding.network.bind_address
+        return str(self.peer_binding.network.bind_address)
 
     @property
     def admin_password(self):
@@ -87,7 +94,7 @@ class CephISCSIGatewayPeers(Object):
 
     @property
     def peer_addresses(self):
-        addresses = []
+        addresses = [self.cluster_bind_address]
         for u in self.peer_rel.units:
             addresses.append(self.peer_rel.data[u]['ingress-address'])
-        return addresses
+        return sorted(addresses)

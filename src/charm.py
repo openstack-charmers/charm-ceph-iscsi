@@ -24,24 +24,46 @@ import ops_openstack
 logger = logging.getLogger()
 
 class GatewayClient():
-    
-    CREATE_TARGET = "/iscsi-targets/ create {gw_iqn}"
+
     def run(self, path, cmd):
         _cmd = ['gwcli', path]
         _cmd.extend(cmd.split())
         logging.info(_cmd)
+        print(_cmd)
         subprocess.check_call(_cmd)
 
-    def create_target(self, gw_iqn):
+    def create_target(self, iqn):
         self.run(
             "/iscsi-targets/",
-            "create {gw_iqn}".format(gw_iqn=gw_iqn))
-        
-    def add_gateway_to_target(self, target, gateway_ip, gateway_fqdn):
+            "create {}".format(iqn))
+
+    def add_gateway_to_target(self, iqn, gateway_ip, gateway_fqdn):
         self.run(
-            "/iscsi-targets/{}/gateways/".format(target),
-            "create {} {}".format(gateway_fqdn, gateway_ip),
-        )
+            "/iscsi-targets/{}/gateways/".format(iqn),
+            "create {} {}".format(gateway_fqdn, gateway_ip))
+
+    def create_pool(self, pool_name, image_name, image_size):
+        self.run(
+            "/disks",
+            "create pool={} image={} size={}".format(
+                pool_name,
+                image_name,
+                image_size))
+
+    def add_client_to_target(self, iqn, initiatorname):
+        self.run(
+            "/iscsi-targets/{}/hosts/".format(iqn),
+            "create {}".format(initiatorname))
+
+    def add_client_auth(self, iqn, initiatorname, username, password):
+        self.run(
+            "/iscsi-targets/{}/hosts/{}".format(iqn, initiatorname),
+            "auth username={} password={}".format(username, password))
+
+    def add_disk_to_client(self, iqn, initiatorname, pool_name, image_name):
+        self.run(
+            "/iscsi-targets/{}/hosts/{}".format(iqn, initiatorname),
+            "disk add {}/{}".format(pool_name, image_name))
 
 class CephISCSIGatewayCharm(ops_openstack.OSBaseCharm):
     state = StoredState()
@@ -71,14 +93,40 @@ class CephISCSIGatewayCharm(ops_openstack.OSBaseCharm):
             'cluster')
         self.framework.observe(self.peers.on.has_peers, self)
         self.framework.observe(self.peers.on.ready_peers, self)
+        self.framework.observe(self.on.create_target_action, self)
+
+    def on_create_target_action(self, event):
+        gw_client = GatewayClient()
+        gw_client.create_target(event.params['iqn'])
+        for gw_unit, gw_config in self.peers.ready_peer_details.items():
+            added_gateways = []
+            if gw_unit in event.params['gateway-units']:
+                gw_client.add_gateway_to_target(
+                    event.params['iqn'],
+                    gw_config['ip'],
+                    gw_config['fqdn'])
+                added_gateways.append(gw_unit)
+        gw_client.create_pool(
+            'iscsi',
+            event.params['image-name'],
+            event.params['image-size'])
+        gw_client.add_client_to_target(
+            event.params['iqn'],
+            event.params['client-initiatorname'])
+        gw_client.add_client_auth(
+            event.params['iqn'],
+            event.params['client-initiatorname'],
+            event.params['client-username'],
+            event.params['client-password'])
+        gw_client.add_disk_to_client(
+            event.params['iqn'],
+            event.params['client-initiatorname'],
+            'iscsi',
+            event.params['image-name'])
 
     def setup_default_target(self):
         gw_client = GatewayClient()
         gw_client.create_target(self.DEFAULT_TARGET)
-        gw_client.add_gateway_to_target(
-            self.DEFAULT_TARGET,
-            self.peers.cluster_bind_address,
-            socket.getfqdn())
         for gw_unit, gw_config in self.peers.ready_peer_details.items():
             gw_client.add_gateway_to_target(
                 self.DEFAULT_TARGET,
