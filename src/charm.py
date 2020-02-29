@@ -79,6 +79,7 @@ class CephISCSIGatewayCharm(ops_openstack.OSBaseCharm):
         '/etc/ceph/ceph.client.ceph-iscsi.keyring': ['rbd-target-api']}
 
     DEFAULT_TARGET = "iqn.2003-01.com.ubuntu.iscsi-gw:iscsi-igw"
+    REQUIRED_RELATIONS = ['ceph-client', 'cluster']
 
     def __init__(self, framework, key):
         super().__init__(framework, key)
