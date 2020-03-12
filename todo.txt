@@ -9,6 +9,7 @@ Todo
 * Certificates interface
 * security checklist
 * zaza tests for pause/resume
+* Ceph haeartbeat settings https://docs.ceph.com/docs/master/rbd/iscsi-requirements/
 
 Mostly Done
 * trusted_ips

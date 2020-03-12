@@ -18,9 +18,54 @@ import charmhelpers.core.templating as ch_templating
 import interface_ceph_client
 import interface_ceph_iscsi_peer
 
+import adapters
 import ops_openstack
 
 logger = logging.getLogger()
+
+
+class CephClientAdapter(adapters.OpenStackOperRelationAdapter):
+
+    def __init__(self, relation):
+        super(CephClientAdapter, self).__init__(relation)
+
+    @property
+    def mon_hosts(self):
+        hosts = self.relation.get_relation_data()['mon_hosts']
+        return ' '.join(sorted(hosts))
+
+    @property
+    def auth_supported(self):
+        return self.relation.get_relation_data()['auth']
+
+    @property
+    def key(self):
+        return self.relation.get_relation_data()['key']
+
+
+class PeerAdapter(adapters.OpenStackOperRelationAdapter):
+
+    def __init__(self, relation):
+        super(PeerAdapter, self).__init__(relation)
+
+
+class GatewayClientPeerAdapter(PeerAdapter):
+
+    def __init__(self, relation):
+        super(GatewayClientPeerAdapter, self).__init__(relation)
+
+    @property
+    def gw_hosts(self):
+        hosts = self.relation.peer_addresses
+        return ' '.join(sorted(hosts))
+
+
+class CephISCSIGatewayAdapters(adapters.OpenStackRelationAdapters):
+
+    relation_adapters = {
+        'ceph-client': CephClientAdapter,
+        'cluster': GatewayClientPeerAdapter,
+    }
 
 
 class GatewayClient():
@@ -85,14 +130,17 @@ class CephISCSIGatewayCharm(ops_openstack.OSBaseCharm):
     def __init__(self, framework, key):
         super().__init__(framework, key)
         self.state.set_default(target_created=False)
-        self.framework.observe(self.on.ceph_client_relation_joined, self)
         self.ceph_client = interface_ceph_client.CephClientRequires(
             self,
             'ceph-client')
-        self.framework.observe(self.ceph_client.on.pools_available, self)
         self.peers = interface_ceph_iscsi_peer.CephISCSIGatewayPeers(
             self,
             'cluster')
+        self.adapters = CephISCSIGatewayAdapters(
+            (self.ceph_client, self.peers),
+            self)
+        self.framework.observe(self.on.ceph_client_relation_joined, self)
+        self.framework.observe(self.ceph_client.on.pools_available, self)
         self.framework.observe(self.peers.on.has_peers, self)
         self.framework.observe(self.peers.on.ready_peers, self)
         self.framework.observe(self.on.create_target_action, self)
@@ -172,15 +220,6 @@ class CephISCSIGatewayCharm(ops_openstack.OSBaseCharm):
             logging.info("Defering setup")
             event.defer()
             return
-        ceph_context = {
-            'use_syslog':
-                str(self.framework.model.config['use-syslog']).lower(),
-            'loglevel': self.framework.model.config['loglevel'],
-            'admin_password': self.peers.admin_password,
-        }
-        ceph_context.update(self.ceph_client.get_pool_data())
-        ceph_context['mon_hosts'] = ' '.join(ceph_context['mon_hosts'])
-        ceph_context['gw_hosts'] = ' '.join(sorted(self.peers.peer_addresses))
 
         def daemon_reload_and_restart(service_name):
             subprocess.check_call(['systemctl', 'daemon-reload'])
@@ -195,7 +234,7 @@ class CephISCSIGatewayCharm(ops_openstack.OSBaseCharm):
                 ch_templating.render(
                     os.path.basename(config_file),
                     config_file,
-                    ceph_context)
+                    self.adapters)
         logging.info("Rendering config")
         render_configs()
         logging.info("Setting started state")
