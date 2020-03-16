@@ -1,6 +1,5 @@
 Todo
 * Remove hardcoded ceph pool name and expose as a config option
-* Write spec
 * Add series upgrade
 * Write README
 * Move to openstack-charmers
@@ -20,3 +19,4 @@ Mostly Done
 * implement source config option
 * Proper Update Status
 * Fix workload status so it reports missing relations
+* Write spec
