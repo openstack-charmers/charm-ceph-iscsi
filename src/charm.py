@@ -20,6 +20,7 @@ import interface_ceph_iscsi_peer
 
 import adapters
 import ops_openstack
+import gwcli_client
 
 logger = logging.getLogger()
 
@@ -68,50 +69,8 @@ class CephISCSIGatewayAdapters(adapters.OpenStackRelationAdapters):
     }
 
 
-class GatewayClient():
+class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
 
-    def run(self, path, cmd):
-        _cmd = ['gwcli', path]
-        _cmd.extend(cmd.split())
-        logging.info(_cmd)
-        print(_cmd)
-        subprocess.check_call(_cmd)
-
-    def create_target(self, iqn):
-        self.run(
-            "/iscsi-targets/",
-            "create {}".format(iqn))
-
-    def add_gateway_to_target(self, iqn, gateway_ip, gateway_fqdn):
-        self.run(
-            "/iscsi-targets/{}/gateways/".format(iqn),
-            "create {} {}".format(gateway_fqdn, gateway_ip))
-
-    def create_pool(self, pool_name, image_name, image_size):
-        self.run(
-            "/disks",
-            "create pool={} image={} size={}".format(
-                pool_name,
-                image_name,
-                image_size))
-
-    def add_client_to_target(self, iqn, initiatorname):
-        self.run(
-            "/iscsi-targets/{}/hosts/".format(iqn),
-            "create {}".format(initiatorname))
-
-    def add_client_auth(self, iqn, initiatorname, username, password):
-        self.run(
-            "/iscsi-targets/{}/hosts/{}".format(iqn, initiatorname),
-            "auth username={} password={}".format(username, password))
-
-    def add_disk_to_client(self, iqn, initiatorname, pool_name, image_name):
-        self.run(
-            "/iscsi-targets/{}/hosts/{}".format(iqn, initiatorname),
-            "disk add {}/{}".format(pool_name, image_name))
-
-
-class CephISCSIGatewayCharm(ops_openstack.OSBaseCharm):
     state = StoredState()
     PACKAGES = ['ceph-iscsi', 'tcmu-runner', 'ceph-common']
     CEPH_CAPABILITIES = [
@@ -129,6 +88,7 @@ class CephISCSIGatewayCharm(ops_openstack.OSBaseCharm):
 
     def __init__(self, framework, key):
         super().__init__(framework, key)
+        logging.info("Using {} class".format(self.release))
         self.state.set_default(target_created=False)
         self.ceph_client = interface_ceph_client.CephClientRequires(
             self,
@@ -146,7 +106,7 @@ class CephISCSIGatewayCharm(ops_openstack.OSBaseCharm):
         self.framework.observe(self.on.create_target_action, self)
 
     def on_create_target_action(self, event):
-        gw_client = GatewayClient()
+        gw_client = gwcli_client.GatewayClient()
         gw_client.create_target(event.params['iqn'])
         for gw_unit, gw_config in self.peers.ready_peer_details.items():
             added_gateways = []
@@ -175,7 +135,7 @@ class CephISCSIGatewayCharm(ops_openstack.OSBaseCharm):
             event.params['image-name'])
 
     def setup_default_target(self):
-        gw_client = GatewayClient()
+        gw_client = gwcli_client.GatewayClient()
         gw_client.create_target(self.DEFAULT_TARGET)
         for gw_unit, gw_config in self.peers.ready_peer_details.items():
             gw_client.add_gateway_to_target(
@@ -244,5 +204,18 @@ class CephISCSIGatewayCharm(ops_openstack.OSBaseCharm):
         logging.info("on_pools_available: status updated")
 
 
+@ops_openstack.charm_class
+class CephISCSIGatewayCharmJewel(CephISCSIGatewayCharmBase):
+
+    state = StoredState()
+    release = 'jewel'
+
+
+@ops_openstack.charm_class
+class CephISCSIGatewayCharmOcto(CephISCSIGatewayCharmBase):
+
+    state = StoredState()
+    release = 'octopus'
+
 if __name__ == '__main__':
-    main(CephISCSIGatewayCharm)
+    main(ops_openstack.get_charm_class_for_release())
