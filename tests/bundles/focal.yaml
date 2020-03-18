@@ -7,6 +7,8 @@ applications:
     charm: ../../
     series: focal
     num_units: 2
+    options:
+      rbd-pool: tmbtil
   ceph-osd:
     charm: cs:~openstack-charmers-next/ceph-osd
     num_units: 3

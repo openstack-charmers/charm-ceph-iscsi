@@ -117,7 +117,7 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
                     gw_config['fqdn'])
                 added_gateways.append(gw_unit)
         gw_client.create_pool(
-            'iscsi',
+            self.framework.model.config['rbd-pool'],
             event.params['image-name'],
             event.params['image-size'])
         gw_client.add_client_to_target(
@@ -131,7 +131,7 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
         gw_client.add_disk_to_client(
             event.params['iqn'],
             event.params['client-initiatorname'],
-            'iscsi',
+            self.framework.model.config['rbd-pool'],
             event.params['image-name'])
 
     def setup_default_target(self):
@@ -168,7 +168,8 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
 
     def on_ceph_client_relation_joined(self, event):
         logging.info("Requesting replicated pool")
-        self.ceph_client.create_replicated_pool('iscsi')
+        self.ceph_client.create_replicated_pool(
+            self.framework.model.config['rbd-pool'])
         logging.info("Requesting permissions")
         self.ceph_client.request_ceph_permissions(
             'ceph-iscsi',

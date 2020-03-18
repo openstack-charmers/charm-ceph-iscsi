@@ -1,14 +1,13 @@
 Todo
-* Remove hardcoded ceph pool name and expose as a config option
-* Add series upgrade
-* Write README
-* Move to openstack-charmers
 * Refactor ceph broker code in charm helpers
 * Rewrite ceph-client interface to stop using any relation* commands via charmhelpers
 * Certificates interface
+* Ceph heartbeat settings https://docs.ceph.com/docs/master/rbd/iscsi-requirements/
+* Write README
+* Move to openstack-charmers
 * security checklist
 * zaza tests for pause/resume
-* Ceph haeartbeat settings https://docs.ceph.com/docs/master/rbd/iscsi-requirements/
+* remove hardcoded password
 
 Mostly Done
 * trusted_ips
@@ -20,3 +19,5 @@ Mostly Done
 * Proper Update Status
 * Fix workload status so it reports missing relations
 * Write spec
+* Remove hardcoded ceph pool name and expose as a config option
+* Add series upgrade
