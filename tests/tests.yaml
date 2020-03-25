@@ -4,6 +4,11 @@ gate_bundles:
 smoke_bundles:
   - focal
 configure:
+  - zaza.openstack.charm_tests.vault.setup.auto_initialize_no_validation
   - zaza.openstack.charm_tests.ceph.iscsi.setup.basic_guest_setup
 tests:
   - zaza.openstack.charm_tests.ceph.iscsi.tests.CephISCSIGatewayTest
+target_deploy_status:
+  vault:
+    workload-status: blocked
+    workload-status-message: Vault needs to be initialized

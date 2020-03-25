@@ -1,15 +1,17 @@
 Todo
-* Refactor ceph broker code in charm helpers
-* Rewrite ceph-client interface to stop using any relation* commands via charmhelpers
-* Certificates interface
-* Ceph heartbeat settings https://docs.ceph.com/docs/master/rbd/iscsi-requirements/
 * Write README
 * Move to openstack-charmers
 * security checklist
 * zaza tests for pause/resume
 * remove hardcoded password
+* switch to mod_wsgi
+
+* Refactor ceph broker code in charm helpers
+* Rewrite ceph-client interface to stop using any relation* commands via charmhelpers
+* Ceph heartbeat settings https://docs.ceph.com/docs/master/rbd/iscsi-requirements/
 
 Mostly Done
+* Certificates interface
 * trusted_ips
 * zaza tests for creating nd mounting a target
 * Implement pause/resume

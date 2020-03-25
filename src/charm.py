@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import socket
 import logging
 import os
 import subprocess
@@ -17,12 +18,13 @@ import charmhelpers.core.host as ch_host
 import charmhelpers.core.templating as ch_templating
 import interface_ceph_client
 import interface_ceph_iscsi_peer
+import interface_tls_certificates
 
 import adapters
 import ops_openstack
 import gwcli_client
 
-logger = logging.getLogger()
+logger = logging.getLogger(__name__)
 
 
 class CephClientAdapter(adapters.OpenStackOperRelationAdapter):
@@ -61,11 +63,22 @@ class GatewayClientPeerAdapter(PeerAdapter):
         return ' '.join(sorted(hosts))
 
 
+class TLSCertificatesAdapter(adapters.OpenStackOperRelationAdapter):
+
+    def __init__(self, relation):
+        super(TLSCertificatesAdapter, self).__init__(relation)
+
+    @property
+    def enable_tls(self):
+        return bool(self.relation.application_certs)
+
+
 class CephISCSIGatewayAdapters(adapters.OpenStackRelationAdapters):
 
     relation_adapters = {
         'ceph-client': CephClientAdapter,
         'cluster': GatewayClientPeerAdapter,
+        'certificates': TLSCertificatesAdapter,
     }
 
 
@@ -90,20 +103,24 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
         super().__init__(framework, key)
         logging.info("Using {} class".format(self.release))
         self.state.set_default(target_created=False)
+        self.state.set_default(enable_tls=False)
         self.ceph_client = interface_ceph_client.CephClientRequires(
             self,
             'ceph-client')
         self.peers = interface_ceph_iscsi_peer.CephISCSIGatewayPeers(
             self,
             'cluster')
+        self.tls = interface_tls_certificates.TlsRequires(self, "certificates")
         self.adapters = CephISCSIGatewayAdapters(
-            (self.ceph_client, self.peers),
+            (self.ceph_client, self.peers, self.tls),
             self)
         self.framework.observe(self.on.ceph_client_relation_joined, self)
         self.framework.observe(self.ceph_client.on.pools_available, self)
         self.framework.observe(self.peers.on.has_peers, self)
         self.framework.observe(self.peers.on.ready_peers, self)
         self.framework.observe(self.on.create_target_action, self)
+        self.framework.observe(self.on.certificates_relation_joined, self)
+        self.framework.observe(self.on.certificates_relation_changed, self)
 
     def on_create_target_action(self, event):
         gw_client = gwcli_client.GatewayClient()
@@ -117,7 +134,7 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
                     gw_config['fqdn'])
                 added_gateways.append(gw_unit)
         gw_client.create_pool(
-            self.framework.model.config['rbd-pool'],
+            self.model.config['rbd-pool'],
             event.params['image-name'],
             event.params['image-size'])
         gw_client.add_client_to_target(
@@ -131,7 +148,7 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
         gw_client.add_disk_to_client(
             event.params['iqn'],
             event.params['client-initiatorname'],
-            self.framework.model.config['rbd-pool'],
+            self.model.config['rbd-pool'],
             event.params['image-name'])
 
     def setup_default_target(self):
@@ -145,7 +162,7 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
         self.state.target_created = True
 
     def on_ready_peers(self, event):
-        if not self.model.unit.is_leader():
+        if not self.unit.is_leader():
             logging.info("Leader should do setup")
             return
         if not self.state.is_started:
@@ -160,7 +177,7 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
 
     def on_has_peers(self, event):
         logging.info("Unit has peers")
-        if self.model.unit.is_leader() and not self.peers.admin_password:
+        if self.unit.is_leader() and not self.peers.admin_password:
             logging.info("Setting admin password")
             alphabet = string.ascii_letters + string.digits
             password = ''.join(secrets.choice(alphabet) for i in range(8))
@@ -169,7 +186,7 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
     def on_ceph_client_relation_joined(self, event):
         logging.info("Requesting replicated pool")
         self.ceph_client.create_replicated_pool(
-            self.framework.model.config['rbd-pool'])
+            self.model.config['rbd-pool'])
         logging.info("Requesting permissions")
         self.ceph_client.request_ceph_permissions(
             'ceph-iscsi',
@@ -203,6 +220,42 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
         self.state.is_started = True
         self.update_status()
         logging.info("on_pools_available: status updated")
+
+    def on_certificates_relation_joined(self, event):
+        addresses = set()
+        for binding_name in ['public', 'cluster']:
+            binding = self.model.get_binding(binding_name)
+            addresses.add(binding.network.ingress_address)
+            addresses.add(binding.network.bind_address)
+        sans = [str(s) for s in addresses]
+        sans.append(socket.gethostname())
+        self.tls.request_application_cert(socket.getfqdn(), sans)
+
+    def on_certificates_relation_changed(self, event):
+        app_certs = self.tls.application_certs
+        if not all([self.tls.root_ca_cert, app_certs]):
+            return
+        if self.tls.chain:
+            # Append chain file so that clients that trust the root CA will
+            # trust certs signed by an intermediate in the chain
+            ca_cert_data = self.tls.root_ca_cert + os.linesep + self.tls.chain
+        pem_data = app_certs['cert'] + os.linesep + app_certs['key']
+        tls_files = {
+            '/etc/ceph/iscsi-gateway.crt': app_certs['cert'],
+            '/etc/ceph/iscsi-gateway.key': app_certs['key'],
+            '/etc/ceph/iscsi-gateway.pem': pem_data,
+            '/usr/local/share/ca-certificates/vault_ca_cert.crt': ca_cert_data}
+        for tls_file, tls_data in tls_files.items():
+            with open(tls_file, 'w') as f:
+                f.write(tls_data)
+        subprocess.check_call(['update-ca-certificates'])
+        cert_out = subprocess.check_output(
+            ('openssl x509 -inform pem -in /etc/ceph/iscsi-gateway.pem '
+             '-pubkey -noout').split())
+        with open('/etc/ceph/iscsi-gateway-pub.key', 'w') as f:
+            f.write(cert_out.decode('UTF-8'))
+        self.state.enable_tls = True
+        self.on_pools_available(event)
 
 
 @ops_openstack.charm_class

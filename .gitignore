@@ -1,2 +1,4 @@
 lib
 .tox
+test-decrpyt.py
+.swp
