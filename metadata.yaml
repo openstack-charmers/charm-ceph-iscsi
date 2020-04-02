@@ -12,6 +12,9 @@ tags:
 series:
   - focal
 subordinate: false
+extra-bindings:
+  public:
+  cluster:
 requires:
   ceph-client:
     interface: ceph-client

@@ -92,7 +92,7 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
         "mgr", "allow r"]
 
     RESTART_MAP = {
-        '/etc/ceph/ceph.conf': ['rbd-target-api'],
+        '/etc/ceph/ceph.conf': ['rbd-target-api', 'rbd-target-gw'],
         '/etc/ceph/iscsi-gateway.cfg': ['rbd-target-api'],
         '/etc/ceph/ceph.client.ceph-iscsi.keyring': ['rbd-target-api']}
 
@@ -104,6 +104,7 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
         logging.info("Using {} class".format(self.release))
         self.state.set_default(target_created=False)
         self.state.set_default(enable_tls=False)
+        self.state.set_default(additional_trusted_ips=[])
         self.ceph_client = interface_ceph_client.CephClientRequires(
             self,
             'ceph-client')
@@ -119,17 +120,28 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
         self.framework.observe(self.peers.on.has_peers, self)
         self.framework.observe(self.peers.on.ready_peers, self)
         self.framework.observe(self.on.create_target_action, self)
+        self.framework.observe(self.on.add_trusted_ip_action, self)
         self.framework.observe(self.on.certificates_relation_joined, self)
         self.framework.observe(self.on.certificates_relation_changed, self)
+        self.framework.observe(self.on.config_changed, self)
+        self.framework.observe(self.on.upgrade_charm, self)
 
+    def on_add_trusted_ip_action(self, event):
+        self.state.additional_trusted_ips.append(event.params['ips'].split(' '))
+        logging.info(self.state.additional_trusted_ips)
+ 
     def on_create_target_action(self, event):
         gw_client = gwcli_client.GatewayClient()
-        gw_client.create_target(event.params['iqn'])
+        target = event.params.get('iqn', self.DEFAULT_TARGET)
+        gateway_units = event.params.get(
+            'gateway-units',
+            [u for u in self.peers.ready_peer_details.keys()])
+        gw_client.create_target(target)
         for gw_unit, gw_config in self.peers.ready_peer_details.items():
             added_gateways = []
-            if gw_unit in event.params['gateway-units']:
+            if gw_unit in gateway_units:
                 gw_client.add_gateway_to_target(
-                    event.params['iqn'],
+                    target,
                     gw_config['ip'],
                     gw_config['fqdn'])
                 added_gateways.append(gw_unit)
@@ -138,18 +150,19 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
             event.params['image-name'],
             event.params['image-size'])
         gw_client.add_client_to_target(
-            event.params['iqn'],
+            target,
             event.params['client-initiatorname'])
         gw_client.add_client_auth(
-            event.params['iqn'],
+            target,
             event.params['client-initiatorname'],
             event.params['client-username'],
             event.params['client-password'])
         gw_client.add_disk_to_client(
-            event.params['iqn'],
+            target,
             event.params['client-initiatorname'],
             self.model.config['rbd-pool'],
             event.params['image-name'])
+        event.set_results({'iqn': target})
 
     def setup_default_target(self):
         gw_client = gwcli_client.GatewayClient()
@@ -173,7 +186,11 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
             logging.info("Initial target setup already complete")
             return
         else:
-            self.setup_default_target()
+            # This appears to race and sometime runs before the
+            # peer is 100% ready. There is probably little value
+            # in this anyway so may just remove it.
+            # self.setup_default_target()
+            return
 
     def on_has_peers(self, event):
         logging.info("Unit has peers")
@@ -191,6 +208,19 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
         self.ceph_client.request_ceph_permissions(
             'ceph-iscsi',
             self.CEPH_CAPABILITIES)
+        self.ceph_client.request_osd_settings({
+            'osd heartbeat grace': 20,
+            'osd heartbeat interval': 5})
+
+    def on_config_changed(self, event):
+        if self.state.is_started:
+            self.on_pools_available(event)
+            self.on_ceph_client_relation_joined(event)
+
+    def on_upgrade_charm(self, event):
+        if self.state.is_started:
+            self.on_pools_available(event)
+            self.on_ceph_client_relation_joined(event)
 
     def on_pools_available(self, event):
         logging.info("on_pools_available")

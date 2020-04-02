@@ -11,20 +11,24 @@ resume:
     corresponding hacluster unit on the node must be resumed as well.
 security-checklist:
   description: Validate the running configuration against the OpenStack security guides checklist
+add-trusted-ip:
+  description: "Add IP address that is permitted to talk to API"
+  params:
+    ips:
+      type: string
+      default: ''
+      description: "Space seperated list of trusted ips"
 create-target:
   description: "Create a new cache tier"
   params:
     gateway-units:
       type: string
-      default: writeback
       description: "Space seperated list of gateway units eg 'ceph-iscsi/0 ceph-scsi/1'"
     iqn:
       type: string
-      default: writeback
       description: "iSCSI Qualified Name"
     image-size:
       type: string
-      default: 1G
       description: "Target size"
     image-name:
       type: string
@@ -32,7 +36,6 @@ create-target:
       description: "Image name "
     client-initiatorname:
       type: string
-      default: 1G
       description: "The initiator name of the client that will mount the target"
     client-username:
       type: string
@@ -41,8 +44,6 @@ create-target:
       type: string
       description: "The CHAPs password to be created for the client"
   required:
-    - gateway-units
-    - iqn
     - image-size
     - image-name
     - client-initiatorname

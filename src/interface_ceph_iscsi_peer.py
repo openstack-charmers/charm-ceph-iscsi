@@ -6,7 +6,7 @@ import socket
 from ops.framework import (
     StoredState,
     EventBase,
-    EventsBase,
+    EventSetBase,
     EventSource,
     Object)
 
@@ -19,7 +19,7 @@ class ReadyPeersEvent(EventBase):
     pass
 
 
-class CephISCSIGatewayPeerEvents(EventsBase):
+class CephISCSIGatewayPeerEvents(EventSetBase):
     has_peers = EventSource(HasPeersEvent)
     ready_peers = EventSource(ReadyPeersEvent)
 
