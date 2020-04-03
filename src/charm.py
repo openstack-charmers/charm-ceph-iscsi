@@ -146,7 +146,7 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
                     gw_config['fqdn'])
                 added_gateways.append(gw_unit)
         gw_client.create_pool(
-            self.model.config['rbd-pool'],
+            event.params['pool-name'],
             event.params['image-name'],
             event.params['image-size'])
         gw_client.add_client_to_target(
@@ -160,7 +160,7 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
         gw_client.add_disk_to_client(
             target,
             event.params['client-initiatorname'],
-            self.model.config['pool-name'],
+            event.params['pool-name'],
             event.params['image-name'])
         event.set_results({'iqn': target})
 
