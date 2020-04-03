@@ -8,7 +8,7 @@ applications:
     series: focal
     num_units: 2
     options:
-      rbd-pool: tmbtil
+      rbd-metadata-pool: tmbtil
   ceph-osd:
     charm: cs:~gnuoy/ceph-osd-5
     num_units: 3

@@ -35,11 +35,11 @@ options:
       192.168.0.0/24).
       If multiple networks are to be used, a space-delimited list of a.b.c.d/x
       can be provided.
-  rbd-pool:
+  rbd-metadata-pool:
     type: string
     default: iscsi
     description: |
-      RBD pool to use for iscsi backend.
+      RBD pool to use to store gateway configuration.
   prefer-ipv6:
     type: boolean
     default: False

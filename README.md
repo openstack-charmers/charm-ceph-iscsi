@@ -77,6 +77,7 @@ Run this action to create an iscsi target.
     $ juju run-action ceph-iscsi/0 create-target \
         image-size=2G \
         image-name=bob \
+        pool-name=superssd \
         client-initiatorname=iqn.1993-08.org.debian:01:aaa2299be916 \
         client-username=usera \
         client-password=testpass
@@ -136,3 +137,9 @@ Alternatively, configuration can be provided as part of a bundle:
         cluster: cluster-space
 ```
 
+<!-- LINKS -->
+
+[cg]: https://docs.openstack.org/charm-guide
+[cdg]: https://docs.openstack.org/project-deploy-guide/charm-deployment-guide
+[juju-docs-spaces]: https://jaas.ai/docs/spaces
+[juju-docs-actions]: https://jaas.ai/docs/actions

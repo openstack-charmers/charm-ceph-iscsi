@@ -34,6 +34,10 @@ create-target:
       type: string
       default: disk_1
       description: "Image name "
+    pool-name:
+      type: string
+      default: iscsi
+      description: "Name of ceph pool to use to back target "
     client-initiatorname:
       type: string
       description: "The initiator name of the client that will mount the target"
@@ -44,6 +48,7 @@ create-target:
       type: string
       description: "The CHAPs password to be created for the client"
   required:
+    - pool-name
     - image-size
     - image-name
     - client-initiatorname
