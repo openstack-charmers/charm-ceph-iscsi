@@ -137,9 +137,81 @@ Alternatively, configuration can be provided as part of a bundle:
         cluster: cluster-space
 ```
 
+# VMWare integration
+
+1. Create ceph pool if required.
+
+   To create a new pool to back the iscsi targets run the create-pool action
+   from the ceph-mon charm.
+
+```bash
+   $ juju run-action ceph-mon/0 create-pool name=iscsi-targets
+   Action queued with id: "1"
+   $ juju show-action-output 1
+   UnitId: ceph-mon/0
+   results:
+     Stderr: |
+       pool 'iscsi-targets' created
+       set pool 2 size to 3
+       set pool 2 target_size_ratio to 0.1
+       enabled application 'unknown' on pool 'iscsi-targets'
+       set pool 2 pg_autoscale_mode to on
+   status: completed
+   timing:
+     completed: 2020-04-08 06:42:00 +0000 UTC
+     enqueued: 2020-04-08 06:41:38 +0000 UTC
+     started: 2020-04-08 06:41:42 +0000 UTC
+```
+
+2. Collect the Initiator name for adapter.
+
+   From the VMWare admin UI select the `Adapters` tab in the Storage
+   context. Ensure `iSCSI enabled` is set to `Enabled`.
+
+   Click 'Configure iSCSI' and take a note of the `iqn` name.
+
+4. Create iSCSI target.
+
+   Run the action to create a target for VMWare to use.
+
+> **Note**: The username should be more than eight characters and the password
+  between twelve and sixteen characters.
+
+```bash
+   $ juju run-action ceph-iscsi/0 create-target \
+       client-initiatorname="iqn.1998-01.com.vmware:node-caloric-02f98bac" \
+       client-username=vmwareclient \
+       client-password=12to16characters \
+       image-size=10G \
+       image-name=disk_1 \
+       pool-name=iscsi-targets
+   $ juju show-action-output 2
+   UnitId: ceph-iscsi/0
+   results:
+     Stdout: |
+       Warning: Could not load preferences file /root/.gwcli/prefs.bin.
+     iqn: iqn.2003-01.com.ubuntu.iscsi-gw:iscsi-igw
+   status: completed
+   timing:
+     completed: 2020-04-08 06:58:34 +0000 UTC
+     enqueued: 2020-04-08 06:58:15 +0000 UTC
+     started: 2020-04-08 06:58:19 +0000 UTC
+```
+
+5. Add target to VMWare.
+
+   Follow the [Ceph iSCSI Gateway][ceph-vmware] documentation to use the new
+   target. Use CHAP username and password provided to the `create-target`
+   action.
+
+> **Warning**: As of the time of writing the workaround to set the CHAP
+  credentials via the esx cli is still needed.
+
+
 <!-- LINKS -->
 
 [cg]: https://docs.openstack.org/charm-guide
 [cdg]: https://docs.openstack.org/project-deploy-guide/charm-deployment-guide
 [juju-docs-spaces]: https://jaas.ai/docs/spaces
 [juju-docs-actions]: https://jaas.ai/docs/actions
+[ceph-vmware]: https://docs.ceph.com/docs/master/rbd/iscsi-initiator-esx/
