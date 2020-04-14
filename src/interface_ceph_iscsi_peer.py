@@ -100,3 +100,12 @@ class CephISCSIGatewayPeers(Object):
         for u in self.peer_rel.units:
             addresses.append(self.peer_rel.data[u]['ingress-address'])
         return sorted(addresses)
+
+    @property
+    def peer_count(self):
+        return len(self.peer_rel.units)
+
+    @property
+    def unit_count(self):
+        return len(self.peer_rel.units) + 1
+

@@ -14,6 +14,7 @@ from ops.framework import (
     StoredState,
 )
 from ops.main import main
+import ops.model
 import charmhelpers.core.host as ch_host
 import charmhelpers.core.templating as ch_templating
 import interface_ceph_client
@@ -98,6 +99,9 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
 
     DEFAULT_TARGET = "iqn.2003-01.com.ubuntu.iscsi-gw:iscsi-igw"
     REQUIRED_RELATIONS = ['ceph-client', 'cluster']
+    # Two has been tested before is probably fine too but needs
+    # validating
+    ALLOWED_UNIT_COUNTS = [2]
 
     def __init__(self, framework, key):
         super().__init__(framework, key)
@@ -286,6 +290,13 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
             f.write(cert_out.decode('UTF-8'))
         self.state.enable_tls = True
         self.on_pools_available(event)
+
+    def custom_status_check(self):
+        if self.peers.unit_count not in self.ALLOWED_UNIT_COUNTS:
+            self.unit.status = ops.model.BlockedStatus(
+                '{} is an invalid unit count'.format(self.peers.unit_count))
+            return False
+        return True
 
 
 @ops_openstack.charm_class
