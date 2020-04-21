@@ -6,7 +6,7 @@ import socket
 from ops.framework import (
     StoredState,
     EventBase,
-    EventSetBase,
+    ObjectEvents,
     EventSource,
     Object)
 
@@ -19,7 +19,7 @@ class ReadyPeersEvent(EventBase):
     pass
 
 
-class CephISCSIGatewayPeerEvents(EventSetBase):
+class CephISCSIGatewayPeerEvents(ObjectEvents):
     has_peers = EventSource(HasPeersEvent)
     ready_peers = EventSource(ReadyPeersEvent)
 
@@ -108,4 +108,3 @@ class CephISCSIGatewayPeers(Object):
     @property
     def unit_count(self):
         return len(self.peer_rel.units) + 1
-
