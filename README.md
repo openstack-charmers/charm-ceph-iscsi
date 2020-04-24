@@ -20,23 +20,35 @@ A sample `bundle.yaml` file's contents:
 
 ```yaml
     series: focal
+    machines:
+      '0':
+      '1':
+      '2':
     applications:
       ceph-iscsi:
         charm: cs:ceph-iscsi
         num_units: 2
+        to:
+        - lxd:0
+        - lxd:1
       ceph-osd:
         charm: cs:ceph-osd
         num_units: 3
         storage:
           osd-devices: /dev/vdb
-        options:
-          source: cloud:bionic-train
+        to:
+        - '0'
+        - '1'
+        - '2'
       ceph-mon:
         charm: cs:ceph-mon
         num_units: 3
         options:
           monitor-count: '3'
-          source: cloud:bionic-train
+        to:
+        - lxd:0
+        - lxd:1
+        - lxd:2
     relations:
     - - ceph-mon:client
       - ceph-iscsi:ceph-client
