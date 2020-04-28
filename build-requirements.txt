@@ -1,0 +1,2 @@
+mod/charm-helpers
+#file:///home/ubuntu/branches/ceph-iscsi/mod/charm-helpers

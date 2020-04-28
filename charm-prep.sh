@@ -1,7 +1,6 @@
 #!/bin/bash
 
 rm -rf lib/*
-rm adapters.py interface_ceph_client.py ops ops_openstack.py
 
 pip install -t lib/ git+https://github.com/juju/charm-helpers.git
 
