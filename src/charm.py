@@ -102,6 +102,7 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
     # Two has been tested before is probably fine too but needs
     # validating
     ALLOWED_UNIT_COUNTS = [2]
+    release = 'default'
 
     def __init__(self, framework, key):
         super().__init__(framework, key)
@@ -131,9 +132,10 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
         self.framework.observe(self.on.upgrade_charm, self)
 
     def on_add_trusted_ip_action(self, event):
-        self.state.additional_trusted_ips.append(event.params['ips'].split(' '))
+        self.state.additional_trusted_ips.append(
+            event.params['ips'].split(' '))
         logging.info(self.state.additional_trusted_ips)
- 
+
     def on_create_target_action(self, event):
         gw_client = gwcli_client.GatewayClient()
         target = event.params.get('iqn', self.DEFAULT_TARGET)
@@ -273,13 +275,15 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
             # Append chain file so that clients that trust the root CA will
             # trust certs signed by an intermediate in the chain
             ca_cert_data = self.tls.root_ca_cert + os.linesep + self.tls.chain
+        else:
+            ca_cert_data = self.tls.root_ca_cert
         pem_data = app_certs['cert'] + os.linesep + app_certs['key']
         tls_files = {
             '/etc/ceph/iscsi-gateway.crt': app_certs['cert'],
             '/etc/ceph/iscsi-gateway.key': app_certs['key'],
             '/etc/ceph/iscsi-gateway.pem': pem_data,
             '/usr/local/share/ca-certificates/vault_ca_cert.crt': ca_cert_data}
-        for tls_file, tls_data in tls_files.items():
+        for tls_file, tls_data in sorted(tls_files.items()):
             with open(tls_file, 'w') as f:
                 f.write(tls_data)
         subprocess.check_call(['update-ca-certificates'])

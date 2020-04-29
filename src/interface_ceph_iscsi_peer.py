@@ -91,8 +91,7 @@ class CephISCSIGatewayPeers(Object):
     @property
     def admin_password(self):
         # https://github.com/canonical/operator/issues/148
-        # return self.peer_rel.data[self.peer_rel.app].get(self.PASSWORD_KEY)
-        return 'hardcodedpassword'
+        return self.peer_rel.data[self.peer_rel.app].get(self.PASSWORD_KEY)
 
     @property
     def peer_addresses(self):
