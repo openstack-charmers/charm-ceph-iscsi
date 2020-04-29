@@ -56,13 +56,15 @@ class TestCephISCSIGatewayPeers(unittest.TestCase):
         relation_id = self.harness.add_relation('cluster', 'ceph-iscsi')
         self.harness.add_relation_unit(
             relation_id,
+            'ceph-iscsi/1')
+        self.harness.update_relation_data(
+            relation_id,
             'ceph-iscsi/1',
             {
                 'ingress-address': '192.0.2.2',
                 'gateway_ready': 'True',
                 'gateway_fqdn': 'ceph-iscsi-1.example'
-            }
-        )
+            })
         self.assertEqual(len(receiver.observed_events), 1)
         self.assertIsInstance(receiver.observed_events[0],
                               ReadyPeersEvent)
@@ -107,27 +109,33 @@ class TestCephISCSIGatewayPeers(unittest.TestCase):
 
         self.harness.add_relation_unit(
             relation_id,
+            'ceph-iscsi/1')
+        self.harness.update_relation_data(
+            relation_id,
             'ceph-iscsi/1',
             {
                 'ingress-address': '192.0.2.2',
                 'gateway_ready': 'True',
                 'gateway_fqdn': 'ceph-iscsi-1.example'
-            }
-        )
+            })
         self.harness.add_relation_unit(
+            relation_id,
+            'ceph-iscsi/2')
+        self.harness.update_relation_data(
             relation_id,
             'ceph-iscsi/2',
             {
                 'ingress-address': '192.0.2.3',
                 'gateway_ready': 'True',
                 'gateway_fqdn': 'ceph-iscsi-2.example',
-            }
-        )
+            })
         self.harness.add_relation_unit(
             relation_id,
+            'ceph-iscsi/3')
+        self.harness.update_relation_data(
+            relation_id,
             'ceph-iscsi/3',
-            {'ingress-address': '192.0.2.4'}
-        )
+            {'ingress-address': '192.0.2.4'})
 
         self.peers.ready_peer_details
 
@@ -144,22 +152,26 @@ class TestCephISCSIGatewayPeers(unittest.TestCase):
 
         self.harness.add_relation_unit(
             relation_id,
+            'ceph-iscsi/1')
+        self.harness.update_relation_data(
+            relation_id,
             'ceph-iscsi/1',
             {
                 'ingress-address': '192.0.2.2',
                 'gateway_ready': 'True',
                 'gateway_fqdn': 'ceph-iscsi-1.example'
-            }
-        )
+            })
         self.harness.add_relation_unit(
+            relation_id,
+            'ceph-iscsi/2')
+        self.harness.update_relation_data(
             relation_id,
             'ceph-iscsi/2',
             {
                 'ingress-address': '192.0.2.3',
                 'gateway_ready': 'True',
                 'gateway_fqdn': 'ceph-iscsi-2.example',
-            }
-        )
+            })
         self.assertEqual(['192.0.2.1', '192.0.2.2', '192.0.2.3'],
                          self.peers.peer_addresses)
 

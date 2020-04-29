@@ -110,13 +110,15 @@ class TestCephISCSIGatewayCharmBase(CharmTestCase):
         rel_id = self.harness.add_relation('cluster', 'ceph-iscsi')
         self.harness.add_relation_unit(
             rel_id,
+            'ceph-iscsi/1')
+        self.harness.update_relation_data(
+            rel_id,
             'ceph-iscsi/1',
             {
                 'ingress-address': '10.0.0.2',
                 'gateway_ready': 'True',
                 'gateway_fqdn': 'ceph-iscsi-1.example'
-            }
-        )
+            })
         return rel_id
 
     @patch('socket.getfqdn')
@@ -165,13 +167,23 @@ class TestCephISCSIGatewayCharmBase(CharmTestCase):
 
     @patch.object(charm.secrets, 'choice')
     def test_on_has_peers(self, _choice):
+        rel_id = self.harness.add_relation('cluster', 'ceph-iscsi')
         _choice.return_value = 'r'
-        self.add_cluster_relation()
         self.harness.begin()
+        self.harness.add_relation_unit(
+            rel_id,
+            'ceph-iscsi/1')
         self.assertIsNone(
             self.harness.charm.peers.admin_password)
         self.harness.set_leader()
-        self.harness.charm.peers.on.has_peers.emit()
+        self.harness.update_relation_data(
+            rel_id,
+            'ceph-iscsi/1',
+            {
+                'ingress-address': '10.0.0.2',
+                'gateway_ready': 'True',
+                'gateway_fqdn': 'ceph-iscsi-1.example'
+            })
         self.assertEqual(
             self.harness.charm.peers.admin_password, 'rrrrrrrr')
 
@@ -205,9 +217,11 @@ class TestCephISCSIGatewayCharmBase(CharmTestCase):
         self.harness.begin()
         self.harness.add_relation_unit(
             rel_id,
+            'ceph-mon/0')
+        self.harness.update_relation_data(
+            rel_id,
             'ceph-mon/0',
-            {'ingress-address': '10.0.0.3'},
-        )
+            {'ingress-address': '10.0.0.3'})
         rel_data = self.harness.get_relation_data(rel_id, 'ceph-iscsi/0')
         req_osd_settings = json.loads(rel_data['osd-settings'])
         self.assertEqual(
@@ -264,9 +278,11 @@ class TestCephISCSIGatewayCharmBase(CharmTestCase):
         self.harness.begin()
         self.harness.add_relation_unit(
             rel_id,
+            'vault/0')
+        self.harness.update_relation_data(
+            rel_id,
             'vault/0',
-            {'ingress-address': '10.0.0.3'},
-        )
+            {'ingress-address': '10.0.0.3'})
         rel_data = self.harness.get_relation_data(rel_id, 'ceph-iscsi/0')
         self.assertEqual(
             rel_data['application_cert_requests'],
@@ -282,8 +298,11 @@ class TestCephISCSIGatewayCharmBase(CharmTestCase):
         with patch('builtins.open', unittest.mock.mock_open()) as _open:
             self.harness.add_relation_unit(
                 rel_id,
+                'vault/0')
+            self.harness.update_relation_data(
+                rel_id,
                 'vault/0',
-                remote_unit_data={
+                {
                     'ceph-iscsi_0.processed_application_requests':
                         '{"app_data": {"cert": "appcert", "key": "appkey"}}',
                     'ca': 'ca'})
