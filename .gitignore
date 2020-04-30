@@ -1,6 +1,6 @@
-lib
 .tox
-test-decrpyt.py
 .swp
 __pycache__
 .stestr/
+lib/*
+!lib/README.txt

@@ -219,6 +219,14 @@ Alternatively, configuration can be provided as part of a bundle:
 > **Warning**: As of the time of writing the workaround to set the CHAP
   credentials via the esx cli is still needed.
 
+## Development
+
+The charm needs to pull in its dependencies before it can be deployed. To
+pull in the dependency versions that correspond to this version of the 
+charm then run the `build` tox target.
+
+To update all dependencies to their latest versions then run the `update-deps`
+tox target.
 
 <!-- LINKS -->
 
