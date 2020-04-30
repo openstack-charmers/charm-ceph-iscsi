@@ -29,8 +29,8 @@ A sample `bundle.yaml` file's contents:
         charm: cs:ceph-iscsi
         num_units: 2
         to:
-        - lxd:0
-        - lxd:1
+        - '0'
+        - '1'
       ceph-osd:
         charm: cs:ceph-osd
         num_units: 3
