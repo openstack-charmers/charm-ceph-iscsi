@@ -102,8 +102,11 @@ class CephISCSIGatewayPeers(Object):
 
     @property
     def peer_count(self):
-        return len(self.peer_rel.units)
+        if self.peer_rel:
+            return len(self.peer_rel.units)
+        else:
+            return 0
 
     @property
     def unit_count(self):
-        return len(self.peer_rel.units) + 1
+        return self.peer_count + 1

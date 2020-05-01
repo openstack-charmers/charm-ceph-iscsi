@@ -131,6 +131,13 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
         self.framework.observe(self.on.config_changed, self)
         self.framework.observe(self.on.upgrade_charm, self)
 
+    def on_install(self, event):
+        if ch_host.is_container():
+            logging.info("Installing into a container is not supported")
+            self.update_status()
+        else:
+            self.install_pkgs()
+
     def on_add_trusted_ip_action(self, event):
         self.state.additional_trusted_ips.append(
             event.params['ips'].split(' '))
@@ -296,6 +303,10 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
         self.on_pools_available(event)
 
     def custom_status_check(self):
+        if ch_host.is_container():
+            self.unit.status = ops.model.BlockedStatus(
+                'Charm cannot be deployed into a container')
+            return False
         if self.peers.unit_count not in self.ALLOWED_UNIT_COUNTS:
             self.unit.status = ops.model.BlockedStatus(
                 '{} is an invalid unit count'.format(self.peers.unit_count))
