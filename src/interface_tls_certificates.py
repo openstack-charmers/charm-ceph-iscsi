@@ -55,14 +55,12 @@ class TlsRequires(Object):
                 if relation.data[unit].get('chain'):
                     return relation.data[unit].get('chain')
 
-    @property
-    def server_certs(self):
+    def get_cert_data(self, suffix):
         """
-        List of [Certificate][] instances for all available server certs.
+        List of [Certificate][] instances for all certs for given suffix.
         """
         unit_name = self.framework.model.unit.name.replace('/', '_')
-        field = '{}.processed_requests'.format(unit_name)
-
+        field = '{}.{}'.format(unit_name, suffix)
         for relation in self.framework.model.relations[self.name]:
             for unit in relation.units:
                 if field not in relation.data[unit]:
@@ -74,43 +72,24 @@ class TlsRequires(Object):
                 if not certs_data:
                     continue
                 return list(certs_data.values())[0]
+
+    @property
+    def server_certs(self):
+        """
+        List of [Certificate][] instances for all available server certs.
+        """
+        return self.get_cert_data('processed_requests')
 
     @property
     def client_certs(self):
         """
         List of [Certificate][] instances for all available client certs.
         """
-        unit_name = self.framework.model.unit.name.replace('/', '_')
-        field = '{}.processed_client_requests'.format(unit_name)
-
-        for relation in self.framework.model.relations[self.name]:
-            for unit in relation.units:
-                if field not in relation.data[unit]:
-                    continue
-                certs_data = relation.data[unit][field]
-                if not certs_data:
-                    continue
-                certs_data = json.loads(certs_data)
-                if not certs_data:
-                    continue
-                return list(certs_data.values())[0]
+        return self.get_cert_data('processed_client_requests')
 
     @property
     def application_certs(self):
         """
         List of [Certificate][] instances for all available application certs.
         """
-        unit_name = self.framework.model.unit.name.replace('/', '_')
-        field = '{}.processed_application_requests'.format(unit_name)
-
-        for relation in self.framework.model.relations[self.name]:
-            for unit in relation.units:
-                if field not in relation.data[unit]:
-                    continue
-                certs_data = relation.data[unit][field]
-                if not certs_data:
-                    continue
-                certs_data = json.loads(certs_data)
-                if not certs_data:
-                    continue
-                return certs_data['app_data']
+        return self.get_cert_data('processed_application_requests')
