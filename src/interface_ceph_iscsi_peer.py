@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import json
 import logging
 import socket
 
@@ -31,6 +32,7 @@ class CephISCSIGatewayPeers(Object):
     PASSWORD_KEY = 'admin_password'
     READY_KEY = 'gateway_ready'
     FQDN_KEY = 'gateway_fqdn'
+    ALLOWED_IPS_KEY = 'allowed_ips'
 
     def __init__(self, charm, relation_name):
         super().__init__(charm, relation_name)
@@ -49,6 +51,11 @@ class CephISCSIGatewayPeers(Object):
     def set_admin_password(self, password):
         logging.info("Setting admin password")
         self.peer_rel.data[self.peer_rel.app][self.PASSWORD_KEY] = password
+
+    def set_allowed_ips(self, ips):
+        logging.info("Setting allowed ips")
+        ip_str = json.dumps(ips)
+        self.peer_rel.data[self.peer_rel.app][self.ALLOWED_IPS_KEY] = ip_str
 
     def announce_ready(self):
         logging.info("announcing ready")
@@ -90,8 +97,17 @@ class CephISCSIGatewayPeers(Object):
 
     @property
     def admin_password(self):
-        # https://github.com/canonical/operator/issues/148
+        if not self.peer_rel:
+            return None
         return self.peer_rel.data[self.peer_rel.app].get(self.PASSWORD_KEY)
+
+    @property
+    def allowed_ips(self):
+        if not self.peer_rel:
+            return None
+        ip_str = self.peer_rel.data[self.peer_rel.app].get(
+            self.ALLOWED_IPS_KEY)
+        return json.loads(ip_str)
 
     @property
     def peer_addresses(self):

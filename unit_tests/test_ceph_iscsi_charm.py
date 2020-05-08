@@ -14,6 +14,7 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
+import os
 import json
 import unittest
 import sys
@@ -30,6 +31,78 @@ from ops.model import (
 from ops import framework, model
 
 import charm
+
+TEST_CA = '''-----BEGIN CERTIFICATE-----
+MIIC8TCCAdmgAwIBAgIUIchLT42Gy3QexrQbppgWb+xF2SgwDQYJKoZIhvcNAQEL
+BQAwGjEYMBYGA1UEAwwPRGl2aW5lQXV0aG9yaXR5MB4XDTIwMDUwNTA5NDIzMVoX
+DTIwMDYwNDA5NDIzMlowGjEYMBYGA1UEAwwPRGl2aW5lQXV0aG9yaXR5MIIBIjAN
+BgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA54oZkgz+xpaM8AKfHTT19lwqvVSr
+W3uZiyyiNAWBX+Ru5/5RqQONKmjPqU3Bh966IBxo8hGYsk7MJ3LobvuG6j497SUc
+nn4JECm/mOKGeQvSSGnor93ropyWAQDQ3U1JVxV/K4sw2EpwwxfaJAM4L5rVi9EK
+TsN23cPI81DKLuDxeXGGDPXMgQuTqfGD74jk6oTpfEHNmQB1Lcj+t+HxQqyoHyo5
+RPNRpntgPAvrF8i1ktJ/EH4GJxSBwm7098JcMgQSif9PHzL0UKehC2mlNX7ljGQ+
+eOLo6XNHYnq6DfxO6c3TbOIYt7VSc8K3IG500/4IzIT3+mtZ3rrM3mQWDwIDAQAB
+oy8wLTAaBgNVHREEEzARgg9EaXZpbmVBdXRob3JpdHkwDwYDVR0TAQH/BAUwAwEB
+/zANBgkqhkiG9w0BAQsFAAOCAQEAfzQSUzfaUv5Q4Eqz2YiWFx2zRYi0mUjYrGf9
+1qcprgpAq7F72+ed3uLGEmMr53+wgL4XdzLnSZwpYRFNBI7/t6hU3kxw9fJC5wMg
+LHLdNlNqXAfoGVVTjcWPiQDF6tguccqyE3UWksl+2fncgkkcUpH4IP0AZVYlCsrz
+mzs5P3ATpdTE1BZiw4WEiE4+N8ZC7Rcz0icfCEbKJduMkkxpJlvp5LwSsmtrpS3v
+IZvomDHx8ypr+byzUTsfbAExdXVpctkG/zLMAi6/ZApO8GlD8ga8BUn2NGfBO5Q8
+28kEjS5DV835Re4hHE6pTC4HEjq0D2r1/4OG7ijt8emO5XPoMg==
+-----END CERTIFICATE-----'''
+
+TEST_APP_CERT = '''-----BEGIN CERTIFICATE-----
+MIID9jCCAt6gAwIBAgIUX5lsqmlS3aFLw7+IqSqadI7W1yswDQYJKoZIhvcNAQEL
+BQAwRTFDMEEGA1UEAxM6VmF1bHQgSW50ZXJtZWRpYXRlIENlcnRpZmljYXRlIEF1
+dGhvcml0eSAoY2hhcm0tcGtpLWxvY2FsKTAeFw0yMDA1MDUwOTQyMTdaFw0yMTA1
+MDUwODQyNDdaMA4xDDAKBgNVBAMTA2FwcDCCASIwDQYJKoZIhvcNAQEBBQADggEP
+ADCCAQoCggEBALfmMzGbbShmQGduZImaGsJWd6vGriVwgYlIV60Kb1MLxuLvMyzV
+tBseRH1izKgPDEmMRafU9N4DC0jRb+04APBM8QBWEDrrYgRQQSNxlCDVMn4Q4iHO
+72FwCqI1HuW0R5J3yik4FkW3Kb8Uq5KDsKWqTLtaBW5X40toi1bkyFTnRZ6/3vmt
+9arAfqmZyXlZK3rN+uiznLx8/rYU5umkicNGfDcWI37wjdYvK/tIE79vPom5VhGb
+R+rz+hri7JmiaYkzrTWWibyjPNK0aGHa5OUIiFJfAtfyjoT1d/pxwS301BWLicw1
+vSzCJcTwpkzh2EWvuquK2sUjgHNR1qAkGIECAwEAAaOCARMwggEPMA4GA1UdDwEB
+/wQEAwIDqDAdBgNVHSUEFjAUBggrBgEFBQcDAQYIKwYBBQUHAwIwHQYDVR0OBBYE
+FL0B0hMaFwG0I0WR4CiOZnrqRHoLMEkGCCsGAQUFBwEBBD0wOzA5BggrBgEFBQcw
+AoYtaHR0cDovLzE3Mi4yMC4wLjE5OjgyMDAvdjEvY2hhcm0tcGtpLWxvY2FsL2Nh
+MDMGA1UdEQQsMCqCA2FwcIIDYXBwgghhcHB1bml0MYIIYXBwdW5pdDKHBKwAAAGH
+BKwAAAIwPwYDVR0fBDgwNjA0oDKgMIYuaHR0cDovLzE3Mi4yMC4wLjE5OjgyMDAv
+djEvY2hhcm0tcGtpLWxvY2FsL2NybDANBgkqhkiG9w0BAQsFAAOCAQEAbf6kIurd
+pBs/84YD59bgeytlo8RatUzquwCRgRSv6N81+dYFBHtEVOoLwy/4wJAH2uMSKK+/
+C13vTBj/cx+SxWSIccPS0rglwEKhRF/u3n9hrFAL3QMLQPEXAJ5rJtapZ7a8uIWy
+bChTMhoL4bApCXG+SH4mbhkD6SWQ1zPgfXD4ZiVtjEVIdyn63/fbNFUfhFKba8BE
+wQUYw0yWq0/8ILq/WPyjKBvhSinIauy+ybdzaDMEg0Grq1n0K5l/WyK+t9tQd+UG
+cLjamd6EKZ2OvOxZN6/cJlHDY2NKfjGF6KhQ5D2cseYK7dhOQ9AFjUCB/NgIAH9D
+8vVp8VJOx6plOw==
+-----END CERTIFICATE-----'''
+
+TEST_APP_KEY = '''-----BEGIN RSA PRIVATE KEY-----
+MIIEpAIBAAKCAQEAt+YzMZttKGZAZ25kiZoawlZ3q8auJXCBiUhXrQpvUwvG4u8z
+LNW0Gx5EfWLMqA8MSYxFp9T03gMLSNFv7TgA8EzxAFYQOutiBFBBI3GUINUyfhDi
+Ic7vYXAKojUe5bRHknfKKTgWRbcpvxSrkoOwpapMu1oFblfjS2iLVuTIVOdFnr/e
++a31qsB+qZnJeVkres366LOcvHz+thTm6aSJw0Z8NxYjfvCN1i8r+0gTv28+iblW
+EZtH6vP6GuLsmaJpiTOtNZaJvKM80rRoYdrk5QiIUl8C1/KOhPV3+nHBLfTUFYuJ
+zDW9LMIlxPCmTOHYRa+6q4raxSOAc1HWoCQYgQIDAQABAoIBAD92GUSNNmYyoxcO
+aXNy0rktza5hqccRxCHz7Q2yBCjMb53wneBi/vw8vbXnWmjEiKD43zDDtJzIwCQo
+4k8ifHBwnNpY2ND8WZ7TcycgEtYhvIL0oJS6LLGbUJAZdMggJnLNE96VlFoKk0V1
+hJ/TAiqpUkF1F1q0yaNEOJGL8fYaI5Mz1pU+rspxS2uURFYGcD78Ouda5Pruwcp3
+A0Sbo+5P0FZRy79zpZbIzlvcS9R7wKuDJExCXXCsoZ+G0BWwTJPsDhkmcuXdS7f3
+3k3VO4Y8rcsOIHtI0Gj38yhO6giDjPeZWmXF6h7+zSWPaZydswTqtyS2BbvUmE3N
+t/HYCOECgYEA2AYQZqAeFk5i7Qnb80pG9q1THZOM4V/FQsyfb9Bzw+nANP6LMd3D
+tnY7BUNj0vTJVy/wnwFSmryQn3OqsxHYbOaor9xjuCauAGzp/4cj0anTySz0pZiQ
+TzVepB35bj8ghRsQ1TO+7FQtMMZQGrNf1i6e3p9+hpKUA6ZwP0OEbpMCgYEA2e5E
+Uqqj1u0pnUAeXp/2VbQS4rmxUrRsbdbiyoypNJOp+Olfi2DjQNgji0XDBdTLhDNv
+nFtHY7TW4HJrwVAAqBlYKkunf6zGlP3iEGhk7RF1LSyGZXjfLACe7kzqlAx34Ue9
+9ynkesNKeT8kOOCC08llHuInMjfgfN0c7jWYNRsCgYEAgzBrlWd33iQMf9eU89MP
+9Y6dA0EwNU5sBX0u9kCpjTjPuV88OTRsPsreXPvoC50NCR3cCzRKbh5F1g/wgn87
+6CbMGsDE7njPAwMhuEThw9pW+72JdWeJfBD1QMXTTNiZbzxYpKGgOPWF3DETRKPa
+d8AoSxqhRCiQKwdQ85qVOnECgYAu6dfTY+B5N/ypWVAwVocU0/rsy8ScZTKiQov3
+xmf2ZYNFjhd/TZAeOWkNZishajmVb+0q34tyr09Cad9AchRyG2KbWEXqeisVj8HG
+fnKbhhKPcvJLjcWdF1UfP3eP/08fM+508pO4yamSiEEn7Uy8grI9/7koWlb9Cixc
+KzVk2QKBgQCdA3eoJHu4nTHRNgcvU3pxbRU4HQV8e+Hiw1tcxjprkACrNVvd7wZS
+wULKjMb8z0RZyTBXLdNw3YKYOk/B7e/e9D+Zve4PTEL23Fcdt532x/7hBQ+7o6/4
+7RxsGx5/PXZI0/YKMKk9hsrdMl4/UAd0izvwPCQbB3eisuZYU/i8Jw==
+-----END RSA PRIVATE KEY-----'''
 
 
 class CharmTestCase(unittest.TestCase):
@@ -57,6 +130,7 @@ class TestCephISCSIGatewayCharmBase(CharmTestCase):
         'ch_templating',
         'gwcli_client',
         'subprocess',
+        'os',
     ]
 
     def setUp(self):
@@ -67,15 +141,9 @@ class TestCephISCSIGatewayCharmBase(CharmTestCase):
         self.gwc = MagicMock()
         self.gwcli_client.GatewayClient.return_value = self.gwc
 
-        # BEGIN: Workaround until
-        # https://github.com/canonical/operator/pull/196 lands
+        # BEGIN: Workaround until network_get is implemented
         class _TestingOPSModelBackend(_TestingModelBackend):
 
-            def relation_ids(self, relation_name):
-                return self._relation_ids_map.get(relation_name, [])
-
-            # Hardcoded until network_get is implemented in
-            # _TestingModelBackend
             def network_get(self, endpoint_name, relation_id=None):
                 network_data = {
                     'bind-addresses': [{
@@ -88,7 +156,7 @@ class TestCephISCSIGatewayCharmBase(CharmTestCase):
                 return network_data
 
         self.harness._backend = _TestingOPSModelBackend(
-            self.harness._unit_name)
+            self.harness._unit_name, self.harness._meta)
         self.harness._model = model.Model(
             self.harness._unit_name,
             self.harness._meta,
@@ -253,6 +321,8 @@ class TestCephISCSIGatewayCharmBase(CharmTestCase):
                         'allow r']}])
 
     def test_on_pools_available(self):
+        self.os.path.exists.return_value = False
+        self.os.path.basename = os.path.basename
         rel_id = self.add_cluster_relation()
         self.harness.update_relation_data(
             rel_id,
@@ -262,14 +332,16 @@ class TestCephISCSIGatewayCharmBase(CharmTestCase):
         self.harness.begin()
         self.harness.charm.ceph_client.on.pools_available.emit()
         self.ch_templating.render.assert_has_calls([
-            call('ceph.conf', '/etc/ceph/ceph.conf', ANY),
+            call('ceph.conf', '/etc/ceph/iscsi/ceph.conf', ANY),
             call('iscsi-gateway.cfg', '/etc/ceph/iscsi-gateway.cfg', ANY),
             call(
                 'ceph.client.ceph-iscsi.keyring',
-                '/etc/ceph/ceph.client.ceph-iscsi.keyring', ANY)])
+                '/etc/ceph/iscsi/ceph.client.ceph-iscsi.keyring', ANY)],
+            any_order=True)
         self.assertTrue(self.harness.charm.state.is_started)
         rel_data = self.harness.get_relation_data(rel_id, 'ceph-iscsi/0')
         self.assertEqual(rel_data['gateway_ready'], 'True')
+        self.os.mkdir.assert_called_once_with('/etc/ceph/iscsi', 488)
 
     @patch('socket.gethostname')
     def test_on_certificates_relation_joined(self, _gethostname):
@@ -290,41 +362,42 @@ class TestCephISCSIGatewayCharmBase(CharmTestCase):
 
     @patch('socket.gethostname')
     def test_on_certificates_relation_changed(self, _gethostname):
+        mock_TLS_CERT_PATH = MagicMock()
+        mock_TLS_CA_CERT_PATH = MagicMock()
+        mock_TLS_KEY_PATH = MagicMock()
+        mock_KEY_AND_CERT_PATH = MagicMock()
+        mock_TLS_PUB_KEY_PATH = MagicMock()
         _gethostname.return_value = 'server1'
         self.subprocess.check_output.return_value = b'pubkey'
         rel_id = self.harness.add_relation('certificates', 'vault')
         self.add_cluster_relation()
         self.harness.begin()
-        with patch('builtins.open', unittest.mock.mock_open()) as _open:
-            self.harness.add_relation_unit(
-                rel_id,
-                'vault/0')
-            self.harness.update_relation_data(
-                rel_id,
-                'vault/0',
-                {
-                    'ceph-iscsi_0.processed_application_requests':
-                        '{"app_data": {"cert": "appcert", "key": "appkey"}}',
-                    'ca': 'ca'})
-        expect_calls = [
-            call('/etc/ceph/iscsi-gateway.crt', 'w'),
-            call('/etc/ceph/iscsi-gateway.key', 'w'),
-            call('/etc/ceph/iscsi-gateway.pem', 'w'),
-            call('/usr/local/share/ca-certificates/vault_ca_cert.crt', 'w')]
-        for open_call in expect_calls:
-            self.assertIn(open_call, _open.call_args_list)
-        handle = _open()
-        handle.write.assert_has_calls([
-            call('appcert'),
-            call('appkey'),
-            call('appcert\nappkey'),
-            call('ca'),
-            call('pubkey')])
+        self.harness.charm.TLS_CERT_PATH = mock_TLS_CERT_PATH
+        self.harness.charm.TLS_CA_CERT_PATH = mock_TLS_CA_CERT_PATH
+        self.harness.charm.TLS_KEY_PATH = mock_TLS_KEY_PATH
+        self.harness.charm.TLS_KEY_AND_CERT_PATH = mock_KEY_AND_CERT_PATH
+        self.harness.charm.TLS_PUB_KEY_PATH = mock_TLS_PUB_KEY_PATH
+        self.harness.add_relation_unit(
+            rel_id,
+            'vault/0')
+        rel_data = {
+            'app_data': {
+                'cert': TEST_APP_CERT,
+                'key': TEST_APP_KEY}}
+        self.harness.update_relation_data(
+            rel_id,
+            'vault/0',
+            {
+                'ceph-iscsi_0.processed_application_requests': json.dumps(
+                    rel_data),
+                'ca': TEST_CA})
+        mock_TLS_CERT_PATH.write_bytes.assert_called_once()
+        mock_TLS_CA_CERT_PATH.write_bytes.assert_called_once()
+        mock_TLS_KEY_PATH.write_bytes.assert_called_once()
+        mock_KEY_AND_CERT_PATH.write_bytes.assert_called_once()
+        mock_TLS_PUB_KEY_PATH.write_bytes.assert_called_once()
         self.subprocess.check_call.assert_called_once_with(
             ['update-ca-certificates'])
-        self.subprocess.check_output.assert_called_once_with(
-            ['openssl', 'x509', '-inform', 'pem', '-in',
-             '/etc/ceph/iscsi-gateway.pem', '-pubkey', '-noout'])
         self.assertTrue(self.harness.charm.state.enable_tls)
 
     def test_custom_status_check(self):

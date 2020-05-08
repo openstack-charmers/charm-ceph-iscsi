@@ -30,7 +30,7 @@ applications:
       - '0'
       - '1'
   ceph-osd:
-    charm: cs:~gnuoy/ceph-osd-5
+    charm: cs:~openstack-charmers-next/ceph-osd
     num_units: 3
     storage:
       osd-devices: 'cinder,10G'
@@ -41,7 +41,7 @@ applications:
       - '1'
       - '2'
   ceph-mon:
-    charm: cs:~gnuoy/ceph-mon-6
+    charm: cs:~openstack-charmers-next/ceph-mon
     num_units: 3
     options:
       monitor-count: '3'
