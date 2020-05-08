@@ -16,6 +16,10 @@ deployed, this will provide multiple data paths to clients.
 > **Note**: Deploying four units is also theoretical possible but has not
   been tested.
 
+The charm cannot be placed in a lxd container. However, it can be located
+with the ceph-osd charms. Co-location with other charms is likely to be
+fine but is untested.
+
 A sample `bundle.yaml` file's contents:
 
 ```yaml
@@ -86,29 +90,23 @@ Actions allow specific operations to be performed on a per-unit basis.
 Run this action to create an iscsi target.
 
 ```bash
-    $ juju run-action ceph-iscsi/0 create-target \
+    $ juju run-action --wait ceph-iscsi/0 create-target \
         image-size=2G \
         image-name=bob \
         pool-name=superssd \
         client-initiatorname=iqn.1993-08.org.debian:01:aaa2299be916 \
         client-username=usera \
         client-password=testpass
-    Action queued with id: "28"
-```
-
-If the iqn of the created target is returned in the ouput from the action:
-
-```bash
-    $ juju show-action-output 28
-    UnitId: ceph-iscsi/0
-    results:
-      iqn: iqn.2003-01.com.ubuntu.iscsi-gw:iscsi-igw
-    status: completed
-    timing:
-      completed: 2020-04-02 13:32:02 +0000 UTC
-      enqueued: 2020-04-02 13:18:42 +0000 UTC
-      started: 2020-04-02 13:18:45 +0000 UTC
-```
+    unit-ceph-iscsi-0:
+      UnitId: ceph-iscsi/0
+      id: "28"
+      results:
+        iqn: iqn.2003-01.com.ubuntu.iscsi-gw:iscsi-igw
+      status: completed
+      timing:
+        completed: 2020-05-08 09:49:52 +0000 UTC
+        enqueued: 2020-05-08 09:49:36 +0000 UTC
+        started: 2020-05-08 09:49:37 +0000 UTC
 
 ### pause
 
@@ -157,9 +155,7 @@ Alternatively, configuration can be provided as part of a bundle:
    from the ceph-mon charm.
 
 ```bash
-   $ juju run-action ceph-mon/0 create-pool name=iscsi-targets
-   Action queued with id: "1"
-   $ juju show-action-output 1
+   $ juju run-action --wait ceph-mon/0 create-pool name=iscsi-targets
    UnitId: ceph-mon/0
    results:
      Stderr: |
@@ -190,14 +186,13 @@ Alternatively, configuration can be provided as part of a bundle:
   between twelve and sixteen characters.
 
 ```bash
-   $ juju run-action ceph-iscsi/0 create-target \
+   $ juju run-action --wait ceph-iscsi/0 create-target \
        client-initiatorname="iqn.1998-01.com.vmware:node-caloric-02f98bac" \
        client-username=vmwareclient \
        client-password=12to16characters \
        image-size=10G \
        image-name=disk_1 \
        pool-name=iscsi-targets
-   $ juju show-action-output 2
    UnitId: ceph-iscsi/0
    results:
      Stdout: |
