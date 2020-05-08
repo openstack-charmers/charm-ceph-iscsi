@@ -18,6 +18,7 @@ import os
 import json
 import unittest
 import sys
+from pathlib import Path
 
 sys.path.append('lib')  # noqa
 sys.path.append('src')  # noqa
@@ -330,7 +331,10 @@ class TestCephISCSIGatewayCharmBase(CharmTestCase):
             {'admin_password': 'existing password',
              'gateway_ready': False})
         self.harness.begin()
-        self.harness.charm.ceph_client.on.pools_available.emit()
+        self.harness.charm.ceph_client.state.pools_available = True
+        with patch.object(Path, 'mkdir') as mock_mkdir:
+            self.harness.charm.ceph_client.on.pools_available.emit()
+            mock_mkdir.assert_called_once_with(exist_ok=True, mode=488)
         self.ch_templating.render.assert_has_calls([
             call('ceph.conf', '/etc/ceph/iscsi/ceph.conf', ANY),
             call('iscsi-gateway.cfg', '/etc/ceph/iscsi-gateway.cfg', ANY),
@@ -341,7 +345,6 @@ class TestCephISCSIGatewayCharmBase(CharmTestCase):
         self.assertTrue(self.harness.charm.state.is_started)
         rel_data = self.harness.get_relation_data(rel_id, 'ceph-iscsi/0')
         self.assertEqual(rel_data['gateway_ready'], 'True')
-        self.os.mkdir.assert_called_once_with('/etc/ceph/iscsi', 488)
 
     @patch('socket.gethostname')
     def test_on_certificates_relation_joined(self, _gethostname):

@@ -13,9 +13,6 @@ sys.path.append('lib')
 
 from ops.framework import (
     StoredState,
-    EventSource,
-    EventBase,
-    ObjectEvents,
 )
 from ops.main import main
 import ops.model
@@ -99,7 +96,6 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
         "mon", "allow *",
         "mgr", "allow r"]
 
-
     DEFAULT_TARGET = "iqn.2003-01.com.ubuntu.iscsi-gw:iscsi-igw"
     REQUIRED_RELATIONS = ['ceph-client', 'cluster']
 
@@ -182,7 +178,6 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
         else:
             self.install_pkgs()
 
-
     def on_has_peers(self, event):
         logging.info("Unit has peers")
         if self.unit.is_leader() and not self.peers.admin_password:
@@ -210,15 +205,17 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
     def render_config(self, event):
         if not self.peers.admin_password:
             logging.info("Defering setup")
+            print("Defering setup admin")
             event.defer()
             return
         if not self.ceph_client.pools_available:
+            print("Defering setup pools")
             logging.info("Defering setup")
             event.defer()
             return
 
         self.CEPH_ISCSI_CONFIG_PATH.mkdir(
-            exist_ok=True, 
+            exist_ok=True,
             mode=0o750)
 
         def daemon_reload_and_restart(service_name):
@@ -280,7 +277,7 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
                 encoding=serialization.Encoding.PEM))
         subprocess.check_call(['update-ca-certificates'])
         self.state.enable_tls = True
-        self.refresh_request(event)
+        self.render_config(event)
 
     def custom_status_check(self):
         if ch_host.is_container():
