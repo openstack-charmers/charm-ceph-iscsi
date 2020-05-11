@@ -173,7 +173,6 @@ class TestCephISCSIGatewayCharmBase(CharmTestCase):
         self.harness.begin()
         self.assertFalse(self.harness.charm.state.target_created)
         self.assertFalse(self.harness.charm.state.enable_tls)
-        self.assertEqual(self.harness.charm.state.additional_trusted_ips, [])
 
     def add_cluster_relation(self):
         rel_id = self.harness.add_relation('cluster', 'ceph-iscsi')

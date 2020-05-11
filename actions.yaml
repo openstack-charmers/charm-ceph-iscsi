@@ -18,6 +18,12 @@ add-trusted-ip:
       type: string
       default: ''
       description: "Space seperated list of trusted ips"
+    overwrite:
+      type: boolean
+      default: False
+      description: "If False append IPs to list"
+  required:
+    - ips
 create-target:
   description: "Create a new cache tier"
   params:

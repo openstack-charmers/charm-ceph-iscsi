@@ -20,9 +20,14 @@ class ReadyPeersEvent(EventBase):
     pass
 
 
+class AllowedIpsChangedEvent(EventBase):
+    pass
+
+
 class CephISCSIGatewayPeerEvents(ObjectEvents):
     has_peers = EventSource(HasPeersEvent)
     ready_peers = EventSource(ReadyPeersEvent)
+    allowed_ips_changed = EventSource(AllowedIpsChangedEvent)
 
 
 class CephISCSIGatewayPeers(Object):
@@ -38,6 +43,8 @@ class CephISCSIGatewayPeers(Object):
         super().__init__(charm, relation_name)
         self.relation_name = relation_name
         self.this_unit = self.framework.model.unit
+        self.state.set_default(
+            allowed_ips=[])
         self.framework.observe(
             charm.on[relation_name].relation_changed,
             self.on_changed)
@@ -47,14 +54,22 @@ class CephISCSIGatewayPeers(Object):
         self.on.has_peers.emit()
         if self.ready_peer_details:
             self.on.ready_peers.emit()
+        if self.allowed_ips != self.state.allowed_ips:
+            self.on.allowed_ips_changed.emit()
+        self.state.allowed_ips = self.allowed_ips
 
     def set_admin_password(self, password):
         logging.info("Setting admin password")
         self.peer_rel.data[self.peer_rel.app][self.PASSWORD_KEY] = password
 
-    def set_allowed_ips(self, ips):
-        logging.info("Setting allowed ips")
-        ip_str = json.dumps(ips)
+    def set_allowed_ips(self, ips, append=True):
+        logging.info("Setting allowed ips: {}".format(append))
+        trusted_ips = []
+        if append and self.allowed_ips:
+            trusted_ips = self.allowed_ips
+        trusted_ips.extend(ips)
+        trusted_ips = sorted(list(set(trusted_ips)))
+        ip_str = json.dumps(trusted_ips)
         self.peer_rel.data[self.peer_rel.app][self.ALLOWED_IPS_KEY] = ip_str
 
     def announce_ready(self):
@@ -106,7 +121,7 @@ class CephISCSIGatewayPeers(Object):
         if not self.peer_rel:
             return None
         ip_str = self.peer_rel.data[self.peer_rel.app].get(
-            self.ALLOWED_IPS_KEY)
+            self.ALLOWED_IPS_KEY, '[]')
         return json.loads(ip_str)
 
     @property

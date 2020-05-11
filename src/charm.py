@@ -64,6 +64,12 @@ class GatewayClientPeerAdapter(PeerAdapter):
         hosts = self.relation.peer_addresses
         return ' '.join(sorted(hosts))
 
+    @property
+    def trusted_ips(self):
+        ips = self.allowed_ips
+        ips.extend(self.relation.peer_addresses)
+        return ' '.join(sorted(ips))
+
 
 class TLSCertificatesAdapter(adapters.OpenStackOperRelationAdapter):
 
@@ -129,8 +135,7 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
         logging.info("Using {} class".format(self.release))
         self.state.set_default(
             target_created=False,
-            enable_tls=False,
-            additional_trusted_ips=[])
+            enable_tls=False)
         self.ceph_client = interface_ceph_client.CephClientRequires(
             self,
             'ceph-client')
@@ -152,6 +157,9 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
         self.framework.observe(
             self.peers.on.has_peers,
             self)
+        self.framework.observe(
+            self.peers.on.allowed_ips_changed,
+            self.render_config)
         self.framework.observe(
             self.ca_client.on.tls_app_config_ready,
             self.on_tls_app_config_ready)
@@ -294,10 +302,11 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
 
     def on_add_trusted_ip_action(self, event):
         if self.unit.is_leader():
-            self.state.additional_trusted_ips = event.params.get('ips')
-            logging.info(len(self.state.additional_trusted_ips))
+            ips = event.params.get('ips').split()
             self.peers.set_allowed_ips(
-                self.state.additional_trusted_ips)
+                ips,
+                append=not event.params['overwrite'])
+            self.render_config(event)
         else:
             event.fail("Action must be run on leader")
 
