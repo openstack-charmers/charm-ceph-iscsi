@@ -24,5 +24,3 @@ requires:
 peers:
   cluster:
     interface: ceph-iscsi-peer
-extra-bindings:
-  public:
