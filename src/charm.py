@@ -130,8 +130,8 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
 
     release = 'default'
 
-    def __init__(self, framework, key):
-        super().__init__(framework, key)
+    def __init__(self, framework):
+        super().__init__(framework)
         logging.info("Using {} class".format(self.release))
         self.state.set_default(
             target_created=False,
@@ -156,7 +156,7 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
             self.render_config)
         self.framework.observe(
             self.peers.on.has_peers,
-            self)
+            self.on_has_peers)
         self.framework.observe(
             self.peers.on.allowed_ips_changed,
             self.render_config)
@@ -174,10 +174,10 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
             self.render_config)
         self.framework.observe(
             self.on.create_target_action,
-            self)
+            self.on_create_target_action)
         self.framework.observe(
             self.on.add_trusted_ip_action,
-            self)
+            self.on_add_trusted_ip_action)
 
     def on_install(self, event):
         if ch_host.is_container():
