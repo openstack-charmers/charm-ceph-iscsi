@@ -69,6 +69,10 @@ essentially an iSCSI client and so its name is client-dependent. Some
 initiators may impose policy on credentials (`client-username` and
 `client-password`).
 
+> **Important**: The underlying machines for the ceph-iscsi units must have
+  internal name resolution working (i.e. the machines must be able to resolve
+  each other's hostnames).
+
 ### The `gwcli` utility
 
 The management of targets, beyond the target-creation action described above,
