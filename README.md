@@ -1,233 +1,160 @@
 # Overview
 
-The charm provides the Ceph iSCSI gateway service. It is intended to be used
-in conjunction with the ceph-osd and ceph-mon charms.
+The ceph-iscsi charm deploys the [Ceph iSCSI gateway
+service][ceph-iscsi-upstream]. The charm is intended to be used in conjunction
+with the [ceph-osd][ceph-osd-charm] and [ceph-mon][ceph-mon-charm] charms.
 
-> **Warning**: This charm is in a preview state for testing and should not
-  be used outside of the lab.
+> **Warning**: This charm is in a preview state and should not be used in
+  production. See the [OpenStack Charm Guide][cg-preview-charms] for more
+  information on preview charms.
 
 # Usage
 
+## Configuration
+
+See file `config.yaml` for the full list of options, along with their
+descriptions and default values.
+
 ## Deployment
 
-When deploying ceph-iscsi ensure that exactly two units of the charm are being
-deployed, this will provide multiple data paths to clients. 
+We are assuming a pre-existing Ceph cluster.
 
-> **Note**: Deploying four units is also theoretical possible but has not
-  been tested.
+To provide multiple data paths to clients deploy exactly two ceph-iscsi units:
 
-The charm cannot be placed in a lxd container. However, it can be located
-with the ceph-osd charms. Co-location with other charms is likely to be
-fine but is untested.
+    juju deploy -n 2 cs:~openstack-charmers-next/ceph-iscsi
 
-A sample `bundle.yaml` file's contents:
+Then add a relation to the ceph-mon application:
 
-```yaml
-    series: focal
-    machines:
-      '0':
-      '1':
-      '2':
-    applications:
-      ceph-iscsi:
-        charm: cs:ceph-iscsi
-        num_units: 2
-        to:
-        - '0'
-        - '1'
-      ceph-osd:
-        charm: cs:ceph-osd
-        num_units: 3
-        storage:
-          osd-devices: /dev/vdb
-        to:
-        - '0'
-        - '1'
-        - '2'
-      ceph-mon:
-        charm: cs:ceph-mon
-        num_units: 3
-        options:
-          monitor-count: '3'
-        to:
-        - lxd:0
-        - lxd:1
-        - lxd:2
-    relations:
-    - - ceph-mon:client
-      - ceph-iscsi:ceph-client
-    - - ceph-osd:mon
-      - ceph-mon:osd
-```
+    juju add-relation ceph-iscsi:ceph-client ceph-mon:client
 
-> **Important**: Make sure the designated block device passed to the ceph-osd
-  charms exists and is not currently in use.
+**Notes**:
 
-Deploy the bundle:
-
-    juju deploy ./bundle.yaml
-
-
-## Managing Targets
-
-The charm provides an action for creating a simple target. If more complex
-managment of targets is requires then the `gwcli` tool should be used. `gwcli`
-is available from the root account on the gateway nodes.
-
-```bash
-   $ juju ssh ceph-iscsi/1
-   $ sudo gwcli
-   /> ls
-```
+* Deploying four ceph-iscsi units is theoretical possible but it is not an
+  officially supported configuration.
+* The ceph-iscsi application cannot be containerised.
+* Co-locating ceph-iscsi with another application is only supported with
+  ceph-osd, although doing so with other applications may still work.
 
 ## Actions
 
 This section covers Juju [actions][juju-docs-actions] supported by the charm.
 Actions allow specific operations to be performed on a per-unit basis.
 
-### create-target
+* `add-trusted-ip`
+* `create-target`
+* `pause`
+* `resume`
+* `security-checklist`
 
-Run this action to create an iscsi target.
+To display action descriptions run `juju actions ceph-iscsi`. If the charm is
+not deployed then see file `actions.yaml`.
 
-```bash
-    $ juju run-action --wait ceph-iscsi/0 create-target \
-        image-size=2G \
-        image-name=bob \
-        pool-name=superssd \
-        client-initiatorname=iqn.1993-08.org.debian:01:aaa2299be916 \
-        client-username=usera \
-        client-password=testpass
-    unit-ceph-iscsi-0:
-      UnitId: ceph-iscsi/0
-      id: "28"
-      results:
-        iqn: iqn.2003-01.com.ubuntu.iscsi-gw:iscsi-igw
-      status: completed
-      timing:
-        completed: 2020-05-08 09:49:52 +0000 UTC
-        enqueued: 2020-05-08 09:49:36 +0000 UTC
-        started: 2020-05-08 09:49:37 +0000 UTC
+## iSCSI target management
 
+### Create an iSCSI target
 
-### pause
+An iSCSI target can be created easily with the charm's `create-target` action:
 
-Pause the ceph-iscsi unit. This action will stop the rbd services.
+    juju run-action --wait ceph-iscsi/0 create-target \
+       client-initiatorname=iqn.1993-08.org.debian:01:aaa2299be916 \
+       client-username=myiscsiusername \
+       client-password=myiscsipassword \
+       image-size=5G \
+       image-name=small \
+       pool-name=images
 
-### resume
+In the above, all option values are generally user-defined with the exception
+of the initiator name (`client-initiatorname`). An iSCSI initiator is
+essentially an iSCSI client and so its name is client-dependent. Some
+initiators may impose policy on credentials (`client-username` and
+`client-password`).
 
-Resume the ceph-iscsi unit. This action will start the rbd services if paused.
+> **Important**: The underlying machines for the ceph-iscsi units must have
+  internal name resolution working (i.e. the machines must be able to resolve
+  each other's hostnames).
 
-## Network spaces
+### The `gwcli` utility
 
-This charm supports the use of Juju [network spaces][juju-docs-spaces] (Juju
-`v.2.0`). This feature optionally allows specific types of the application's
-network traffic to be bound to subnets that the underlying hardware is
-connected to.
+The management of targets, beyond the target-creation action described above,
+can be accomplished via the `gwcli` utility. This CLI tool has its own shell,
+and is available from any ceph-iscsi unit:
 
-> **Note**: Spaces must be configured in the backing cloud prior to deployment.
+    juju ssh ceph-iscsi/1
+    sudo gwcli
+    /> help
 
-The ceph-iscsi charm exposes the following traffic types (bindings):
+## VMWare integration
 
-- 'public' (front-side)
-- 'cluster' (back-side)
+Ceph can be used to back iSCSI targets for VMWare initiators.
 
-For example, providing that spaces 'data-space' and 'cluster-space' exist, the
-deploy command above could look like this:
+Begin by accessing the VMWare admin web UI.
 
-    juju deploy --config ceph-iscsi.yaml -n 2 ceph-iscsi \
-       --bind "public=data-space cluster=cluster-space"
+These instructions were written using VMWare ESXi 6.7.0.
 
-Alternatively, configuration can be provided as part of a bundle:
+### Create a Ceph pool
 
-```yaml
-    ceph-iscsi:
-      charm: cs:ceph-iscsi
-      num_units: 2
-      bindings:
-        public: data-space
-        cluster: cluster-space
-```
+If desired, create a Ceph pool to back the VMWare targets with the ceph-mon
+charm's `create-pool` action:
 
-# VMWare integration
+    juju run-action --wait ceph-mon/0 create-pool name=vmware-iscsi
 
-1. Create ceph pool if required.
+### Enable the initiator
 
-   To create a new pool to back the iscsi targets run the create-pool action
-   from the ceph-mon charm.
+From the web UI select the `Adapters` tab in the `Storage` context. Click
+`Configure iSCSI` and enable iSCSI.
 
-```bash
-   $ juju run-action --wait ceph-mon/0 create-pool name=iscsi-targets
-   UnitId: ceph-mon/0
-   results:
-     Stderr: |
-       pool 'iscsi-targets' created
-       set pool 2 size to 3
-       set pool 2 target_size_ratio to 0.1
-       enabled application 'unknown' on pool 'iscsi-targets'
-       set pool 2 pg_autoscale_mode to on
-   status: completed
-   timing:
-     completed: 2020-04-08 06:42:00 +0000 UTC
-     enqueued: 2020-04-08 06:41:38 +0000 UTC
-     started: 2020-04-08 06:41:42 +0000 UTC
-```
+Take a note of the initiator name, or UID. Here the UID we'll use is
+`iqn.1998-01.com.vmware:node-gadomski-6a5e962a`.
 
-2. Collect the Initiator name for adapter.
+### Create an iSCSI target
 
-   From the VMWare admin UI select the `Adapters` tab in the Storage
-   context. Ensure `iSCSI enabled` is set to `Enabled`.
+With the `create-target` action create a target for VMWare to use. Use the pool
+that may have been created previously:
 
-   Click 'Configure iSCSI' and take a note of the `iqn` name.
-
-4. Create iSCSI target.
-
-   Run the action to create a target for VMWare to use.
-
-> **Note**: The username should be more than eight characters and the password
-  between twelve and sixteen characters.
-
-```bash
-   $ juju run-action --wait ceph-iscsi/0 create-target \
-       client-initiatorname="iqn.1998-01.com.vmware:node-caloric-02f98bac" \
+    juju run-action --wait ceph-iscsi/0 create-target \
+       client-initiatorname=iqn.1998-01.com.vmware:node-gadomski-6a5e962a \
        client-username=vmwareclient \
        client-password=12to16characters \
-       image-size=10G \
-       image-name=disk_1 \
-       pool-name=iscsi-targets
-   UnitId: ceph-iscsi/0
-   results:
-     Stdout: |
-       Warning: Could not load preferences file /root/.gwcli/prefs.bin.
-     iqn: iqn.2003-01.com.ubuntu.iscsi-gw:iscsi-igw
-   status: completed
-   timing:
-     completed: 2020-04-08 06:58:34 +0000 UTC
-     enqueued: 2020-04-08 06:58:15 +0000 UTC
-     started: 2020-04-08 06:58:19 +0000 UTC
-```
+       image-size=5G \
+       image-name=disk-1 \
+       pool-name=vmware-iscsi
 
-5. Add target to VMWare.
+> **Note**: VMWare imposes a policy on credentials. The username should be more
+  than eight characters and the password between twelve and sixteen characters.
 
-   Follow the [Ceph iSCSI Gateway][ceph-vmware] documentation to use the new
-   target. Use CHAP username and password provided to the `create-target`
-   action.
+### Add a target to VMWare
 
-> **Warning**: As of the time of writing the workaround to set the CHAP
-  credentials via the esx cli is still needed.
+Follow the [Ceph iSCSI gateway for VMWare][ceph-iscsi-vmware-upstream]
+documentation to use the new target. Use the (CHAP) username and password
+passed to the `create-target` action.
 
-## Development
+When finished, under the `Devices` tab you should see the created target. To
+make more devices available to VMWare simply create more targets (use a
+different image name and optionally a different image size). You will need to
+`Rescan` and `Refresh` for the new devices to appear.
 
-The charm needs to pull in its dependencies before it can be deployed. To
-pull in the dependency versions that correspond to this version of the 
-charm then run the `build` tox target.
+> **Note**: At the time of writing, the redundant task of setting the
+  credentials via the ESX CLI is still a necessity. This will require you to
+  enable SSH under `Manage` > `Services` > `TSM-SSH` > `Actions` (Start).
 
-To update all dependencies to their latest versions then run the `update-deps`
-tox target.
+<!--
+
+# Bugs
+
+Please report bugs on [Launchpad][lp-bugs-charm-ceph-iscsi].
+
+For general charm questions refer to the [OpenStack Charm Guide][cg].
+
+-->
 
 <!-- LINKS -->
 
+[ceph-mon-charm]: https://jaas.ai/ceph-mon
+[ceph-osd-charm]: https://jaas.ai/ceph-osd
 [cg]: https://docs.openstack.org/charm-guide
+[cg-preview-charms]: https://docs.openstack.org/charm-guide/latest/openstack-charms.html#tech-preview-charms-beta
 [cdg]: https://docs.openstack.org/project-deploy-guide/charm-deployment-guide
-[juju-docs-spaces]: https://jaas.ai/docs/spaces
 [juju-docs-actions]: https://jaas.ai/docs/actions
-[ceph-vmware]: https://docs.ceph.com/docs/master/rbd/iscsi-initiator-esx/
+[ceph-iscsi-upstream]: https://docs.ceph.com/docs/master/rbd/iscsi-overview/
+[ceph-iscsi-vmware-upstream]: https://docs.ceph.com/docs/master/rbd/iscsi-initiator-esx/
+[lp-bugs-charm-ceph-iscsi]: https://bugs.launchpad.net/charm-ceph-iscsi/+filebug
