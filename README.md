@@ -21,7 +21,7 @@ We are assuming a pre-existing Ceph cluster.
 
 To provide multiple data paths to clients deploy exactly two ceph-iscsi units:
 
-    juju deploy -n 2 cs:~gnuoy/ceph-iscsi-08
+    juju deploy -n 2 cs:~openstack-charmers-next/ceph-iscsi
 
 Then add a relation to the ceph-mon application:
 
