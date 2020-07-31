@@ -52,7 +52,7 @@ class TestCephISCSIGatewayPeers(unittest.TestCase):
 
         receiver = TestReceiver(self.harness.framework, 'receiver')
         self.harness.framework.observe(self.peers.on.ready_peers,
-                                       receiver)
+                                       receiver.on_ready_peers)
         relation_id = self.harness.add_relation('cluster', 'ceph-iscsi')
         self.harness.add_relation_unit(
             relation_id,

@@ -1,6 +1,9 @@
 .tox
-.swp
+**/*.swp
 __pycache__
 .stestr/
 lib/*
 !lib/README.txt
+build
+ceph-iscsi.charm
+

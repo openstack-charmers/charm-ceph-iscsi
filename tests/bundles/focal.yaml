@@ -1,3 +1,4 @@
+local_overlay_enabled: False
 series: focal
 machines:
   '0':
@@ -22,7 +23,7 @@ applications:
     to:
       - '7'
   ceph-iscsi:
-    charm: ../../
+    charm: ../../ceph-iscsi.charm
     num_units: 2
     options:
       rbd-metadata-pool: tmbtil
