@@ -18,18 +18,18 @@ from ops.main import main
 import ops.model
 import charmhelpers.core.host as ch_host
 import charmhelpers.core.templating as ch_templating
-import interface_ceph_client
+import interface_ceph_client.ceph_client as ceph_client
 import interface_ceph_iscsi_peer
-import ca_client
+import interface_tls_certificates.ca_client as ca_client
 
-import adapters
-import ops_openstack
+import ops_openstack.adapters
+import ops_openstack.core
 import gwcli_client
 import cryptography.hazmat.primitives.serialization as serialization
 logger = logging.getLogger(__name__)
 
 
-class CephClientAdapter(adapters.OpenStackOperRelationAdapter):
+class CephClientAdapter(ops_openstack.adapters.OpenStackOperRelationAdapter):
 
     def __init__(self, relation):
         super(CephClientAdapter, self).__init__(relation)
@@ -48,7 +48,7 @@ class CephClientAdapter(adapters.OpenStackOperRelationAdapter):
         return self.relation.get_relation_data()['key']
 
 
-class PeerAdapter(adapters.OpenStackOperRelationAdapter):
+class PeerAdapter(ops_openstack.adapters.OpenStackOperRelationAdapter):
 
     def __init__(self, relation):
         super(PeerAdapter, self).__init__(relation)
@@ -71,7 +71,8 @@ class GatewayClientPeerAdapter(PeerAdapter):
         return ' '.join(sorted(ips))
 
 
-class TLSCertificatesAdapter(adapters.OpenStackOperRelationAdapter):
+class TLSCertificatesAdapter(
+        ops_openstack.adapters.OpenStackOperRelationAdapter):
 
     def __init__(self, relation):
         super(TLSCertificatesAdapter, self).__init__(relation)
@@ -84,7 +85,8 @@ class TLSCertificatesAdapter(adapters.OpenStackOperRelationAdapter):
             return False
 
 
-class CephISCSIGatewayAdapters(adapters.OpenStackRelationAdapters):
+class CephISCSIGatewayAdapters(
+        ops_openstack.adapters.OpenStackRelationAdapters):
 
     relation_adapters = {
         'ceph-client': CephClientAdapter,
@@ -93,7 +95,7 @@ class CephISCSIGatewayAdapters(adapters.OpenStackRelationAdapters):
     }
 
 
-class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
+class CephISCSIGatewayCharmBase(ops_openstack.core.OSBaseCharm):
 
     state = StoredState()
     PACKAGES = ['ceph-iscsi', 'tcmu-runner', 'ceph-common']
@@ -136,7 +138,7 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
         self.state.set_default(
             target_created=False,
             enable_tls=False)
-        self.ceph_client = interface_ceph_client.CephClientRequires(
+        self.ceph_client = ceph_client.CephClientRequires(
             self,
             'ceph-client')
         self.peers = interface_ceph_iscsi_peer.CephISCSIGatewayPeers(
@@ -345,18 +347,18 @@ class CephISCSIGatewayCharmBase(ops_openstack.OSBaseCharm):
         event.set_results({'iqn': target})
 
 
-@ops_openstack.charm_class
+@ops_openstack.core.charm_class
 class CephISCSIGatewayCharmJewel(CephISCSIGatewayCharmBase):
 
     state = StoredState()
     release = 'jewel'
 
 
-@ops_openstack.charm_class
+@ops_openstack.core.charm_class
 class CephISCSIGatewayCharmOcto(CephISCSIGatewayCharmBase):
 
     state = StoredState()
     release = 'octopus'
 
 if __name__ == '__main__':
-    main(ops_openstack.get_charm_class_for_release())
+    main(ops_openstack.core.get_charm_class_for_release())

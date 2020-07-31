@@ -159,7 +159,6 @@ class TestCephISCSIGatewayCharmBase(CharmTestCase):
         self.harness._backend = _TestingOPSModelBackend(
             self.harness._unit_name, self.harness._meta)
         self.harness._model = model.Model(
-            self.harness._unit_name,
             self.harness._meta,
             self.harness._backend)
         self.harness._framework = framework.Framework(
