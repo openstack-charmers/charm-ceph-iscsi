@@ -7,7 +7,7 @@ mock>=1.2
 flake8>=2.2.4,<=2.4.1
 stestr>=2.2.0
 requests>=2.18.4
-git+https://github.com/gnuoy/zaza.git@force-focal#egg=zaza
-git+https://github.com/gnuoy/zaza-openstack-tests.git@ceph-iscsi-tests#egg=zaza.openstack
+git+https://github.com/openstack-charmers/zaza.git#egg=zaza
+git+https://github.com/openstack-charmers/zaza-openstack-tests.git#egg=zaza.openstack
 pytz    # workaround for 14.04 pip/tox
 pyudev  # for ceph-* charm unit tests (not mocked?)
