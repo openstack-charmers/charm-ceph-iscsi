@@ -1,3 +1,8 @@
+> **WARNING**: THIS REPO HAS MOVED TO
+>
+> * https://opendev.org/openstack/charm-ceph-iscsi
+> * https://github.com/openstack/charm-ceph-iscsi
+
 # Overview
 
 The ceph-iscsi charm deploys the [Ceph iSCSI gateway
